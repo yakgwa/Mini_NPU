@@ -393,7 +393,7 @@
         
 는 각 PE의 누산 결과를 저장하는 2-D 배열(ROWS×COLS개)입니다.
 
-- * PE Interconnect 구성 방식: 내부 조건 분기 vs. 외부 Bus 확장
+- PE Interconnect 구성 방식: 내부 조건 분기 vs. 외부 Bus 확장
 
         assign a_in_cell = (c == 0) ? a_in_row[r] : a_sig[r][c-1];
         assign b_in_cell = (r == 0) ? b_in_col[c] : b_sig[r-1][c];
