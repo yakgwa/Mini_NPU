@@ -531,8 +531,8 @@ CPU·GPU·TPU의 실제 시뮬레이션 결과에 대한 내용은 본문에서 
 
 https://courses.grainger.illinois.edu/cs533/sp2025/notes/tpu_arch.pdf
 
-다음 글에서는 아래 두 가지 방향 중 하나로 내용을 이어갈 예정입니다.
+아래 두 가지 방향 중 하나로 내용을 이어갈 예정입니다.
 
-|1. Gemmini 논문을 분석하여 systolic array 구조를 보다 자세히 살펴보는 방향|
+1. Gemmini 논문을 분석하여 systolic array 구조를 보다 자세히 살펴보는 방향
 
-|2. 해당 논문을 참고해 실제 PE Block을 구현해보는 방향|
+2. 해당 논문을 참고해 실제 PE Block을 구현해보는 방향
