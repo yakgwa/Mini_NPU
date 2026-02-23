@@ -10,19 +10,20 @@ Directory 내 Python 폴더로 이동하면 여러 Python 스크립트가 존재
 
 genTestData.py는 test data를 생성하는 스크립트이며, 해당 파일을 열어보면 가장 먼저 출력 경로를 설정하는 부분이 확인됩니다.
 
-outputPath = "../CNN-MNIST-Arty-Z7/CNN-MNIST-Arty-Z7.sim/sim_1/behav/xsim/"
-headerFilePath = "../CNN-MNIST-Arty-Z7/CNN-MNIST-Arty-Z7.sim/sim_1/behav/xsim/"
+  outputPath = "../CNN-MNIST-Arty-Z7/CNN-MNIST-Arty-Z7.sim/sim_1/behav/xsim/"
+  headerFilePath = "../CNN-MNIST-Arty-Z7/CNN-MNIST-Arty-Z7.sim/sim_1/behav/xsim/"
 ​
 
 위 경로는 생성된 test_data.txt 및 관련 헤더 파일이 저장될 ModelSim(XSIM) 시뮬레이션 디렉터리를 지정합니다.
 
 실제 ModelSim이 실행되는 디렉터리로 출력 경로를 직접 지정하였습니다.
 
-outputPath = "C:/NPU_study/ref/"
-headerFilePath = "C:/NPU_study/ref/"
+  outputPath = "C:/NPU_study/ref/"
+  headerFilePath = "C:/NPU_study/ref/"
+  
 이를 통해 genTestData.py 실행 시 생성되는 모든 test data 파일이 ModelSim 시뮬레이션 디렉터리 내에 직접 생성되며, RTL testbench에서 별도의 경로 수정 없이 해당 파일을 바로 참조할 수 있습니다.
 
-genTestData.py 실행 
+### genTestData.py 실행 
 
 경로를 절대 경로로 수정한 이후에는 Python 스크립트의 위치에서 직접 실행하면 됩니다.
 
@@ -30,37 +31,33 @@ genTestData.py 실행
 
 Windows CMD 또는 PowerShell을 실행합니다.
 
-​
-
 2. Python 스크립트가 있는 디렉터리로 이동
 
-cd C:\NPU_study\CNN-Handwritten-Digit-MNIST-main\Network\Vivado\Python
-(※ genTestData.py가 위치한 정확한 경로로 이동)
+  cd C:\NPU_study\CNN-Handwritten-Digit-MNIST-main\Network\Vivado\Python
+  (※ genTestData.py가 위치한 정확한 경로로 이동)
+  
 3. 스크립트 실행
 
-python genTestData.py
+  python genTestData.py
+  
 ※ numpy Error 발생 시
 
 만약 해당 오류가 발생한다면, 이는 Python 실행 환경에 NumPy 라이브러리가 설치되어 있지 않을 경우에 발생합니다.
 
-​
+genTestData.py는 Reference Model 기반의 연산 및 test data 생성을 위해 NumPy를 사용하므로, 사전에 해당 라이브러리가 설치되어 있어야 합니다.
 
-genTestData.py는 Reference Model 기반의 연산 및 test data 생성을 위해 NumPy를 사용하므로, 
-
-사전에 해당 라이브러리가 설치되어 있어야 합니다.
-
-Traceback (most recent call last):
-  File "C:\NPU_study\CNN-Handwritten-Digit-MNIST-main\Network\Vivado\Python\genTestData.py", line 11, in <module>
-    import numpy as np
-ModuleNotFoundError: No module named 'numpy'
-해결 방법
+  Traceback (most recent call last):
+    File "C:\NPU_study\CNN-Handwritten-Digit-MNIST-main\Network\Vivado\Python\genTestData.py", line 11, in <module>
+      import numpy as np
+  ModuleNotFoundError: No module named 'numpy'
+  
+### 해결 방법
 
 Command Prompt 또는 PowerShell을 실행한 뒤, 아래 명령어를 통해 NumPy를 설치합니다.
 
-python -m pip install numpy
+  python -m pip install numpy
+  
 이후 3. 스크립트 실행을 재실행 합니다.
-
-​
 
 4. 실행 결과 확인
 
