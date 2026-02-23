@@ -1,7 +1,7 @@
 <div align="center">
 
 <!-- logo -->
-<img src="https://https://github.com/yakgwa/Mini_NPU/Picture_Data/images_1.jpeg" width="400"/>
+<img src="https://github.com/yakgwa/Mini_NPU/Picture_Data/images_1.jpeg" width="400"/>
 
 ### Mini NPU 🖍️
 
