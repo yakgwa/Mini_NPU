@@ -30,7 +30,7 @@ MNIST 손글씨 Dataset​
 
 Reference Model의 Testbench인 top_sim.v를 분석해보겠습니다.
 
-​### 1. Interface 구조
+### 1. Interface 구조
 
 TB를 확인하면, DUT는 두 가지 인터페이스를 기준으로 설계되어 있습니다.
 
