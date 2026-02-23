@@ -155,7 +155,7 @@ Row마다 서로 다른 Feature를 할당합니다. 샘플 10개는 한꺼번에
 
 각 PE는 a_reg를 가지며, 입력 값은 매 cycle마다 우측으로 전달됩니다.
 
-  a_reg <= left_neighbor_a_reg
+   a_reg <= left_neighbor_a_reg
   
 이 흐름을 통해 하나의 입력 데이터가 동일 Row에 있는 4개의 Output Column PE에 차례대로 재사용됩니다.
 
@@ -223,7 +223,7 @@ Array 내부에서는 4개 채널에 대한 합만 계산되므로, 전체 784�
 
 1. Tile Setup: W[0..3][0..3] 로드
 2. Streaming: Sample 0~9가 차례대로 Row 0~3을 대각선으로 통과
-3.Accumulation: 하단으로 나온 결과(Sample 0~9의 부분합)를 메모리에 저장
+3. Accumulation: 하단으로 나온 결과(Sample 0~9의 부분합)를 메모리에 저장
 4. Swap: Weight W[4..7][0..3] 으로 교체 (Double Buffer)
 5. Repeat: Sample 0~9 다시 주입하여 이전 결과에 누적
 
