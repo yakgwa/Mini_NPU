@@ -155,7 +155,7 @@ Row마다 서로 다른 Feature를 할당합니다. 샘플 10개는 한꺼번에
 
 각 PE는 a_reg를 가지며, 입력 값은 매 cycle마다 우측으로 전달됩니다.
 
-   a_reg <= left_neighbor_a_reg
+        a_reg <= left_neighbor_a_reg
   
 이 흐름을 통해 하나의 입력 데이터가 동일 Row에 있는 4개의 Output Column PE에 차례대로 재사용됩니다.
 
