@@ -8,37 +8,20 @@
 
 이에 따라 본격적인 분석에 앞서, 관련 개념들을 role과 level of abstraction 관점에서 정리했습니다.
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_17.jpg" width="400"/>
 
-### Model / Algorithm Level (Neural Network architecture) : 가장 상위 레벨에서는 Neural Network가 어떤 구조로 구성되어 있는지를 정의합니다.
+<div align="left">
 
-​
+- Model / Algorithm Level (Neural Network architecture) : 
+  가장 상위 레벨에서는 Neural Network가 어떤 구조로 구성되어 있는지를 정의합니다. 이 레벨의 핵심은 layer의 종류, connection 방식, 그리고 data flow​이며, 구체적인 computation 구현 방식이나 hardware 구현 세부 사항은 다루지 않습니다.
 
-이 레벨의 핵심은 layer의 종류, connection 방식, 그리고 data flow​이며,
+​- DNN (Deep Neural Network)
 
-구체적인 computation 구현 방식이나 hardware 구현 세부 사항은 다루지 않습니다.
+  여러 개의 hidden layer를 가지는 Neural Network를 포괄적으로 지칭하는 개념입니다. 특정한 구조를 의미하기보다는, 네트워크의 depth(depth-wise complexity)를 강조하는 상위 분류(umbrella term)에 가깝습니다.
 
-​
+​- MLP (Multi-Layer Perceptron)
 
-DNN (Deep Neural Network)
-
-여러 개의 hidden layer를 가지는 Neural Network를 포괄적으로 지칭하는 개념입니다.
-
-
-특정한 구조를 의미하기보다는, 
-
-네트워크의 depth(depth-wise complexity)를 강조하는 상위 분류(umbrella term)에 가깝습니다.
-
-​
-
-MLP (Multi-Layer Perceptron)
-
-multiple fully connected layer로 구성된 가장 기본적인 DNN architecture입니다.
-
-​
-
-내부 연산은 MatMul + Bias Add + Activation 형태로 직접 표현되며,
-
-Neural Network 연산이 MatMul 기반으로 구현됨을 가장 직관적으로 보여주는 예시입니다.
+  multiple fully connected layer로 구성된 가장 기본적인 DNN architecture입니다. 내부 연산은 MatMul + Bias Add + Activation 형태로 직접 표현되며, Neural Network 연산이 MatMul 기반으로 구현됨을 가장 직관적으로 보여주는 예시입니다.
 
 ​
 
