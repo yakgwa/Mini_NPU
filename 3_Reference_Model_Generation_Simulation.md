@@ -159,13 +159,11 @@ Command Prompt 또는 PowerShell을 실행한 뒤, 아래 명령어를 통해 Nu
 
     해당 창에서 work → top_sim을 선택하면 Simulation 화면이 실행됩니다.
 
- <div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_35.png" width="400"/>
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_35.png" width="400"/>
 
 <div align="left">  
 
-    Waveform을 확인하기 위해 View → Wave를 선택하여 Wave 창을 엽니다.
-
-    이후 확인하고자 하는 신호를 Wave 창으로 추가한 뒤, Simulate → Run을 실행하면 해당 신호의 Waveform을 확인할 수 있습니다.
+    Waveform을 확인하기 위해 View → Wave를 선택하여 Wave 창을 엽니다. 이후 확인하고자 하는 신호를 Wave 창으로 추가한 뒤, Simulate → Run을 실행하면 해당 신호의 Waveform을 확인할 수 있습니다.
 
 7. 최종 Simulation 결과
 
@@ -173,30 +171,27 @@ Command Prompt 또는 PowerShell을 실행한 뒤, 아래 명령어를 통해 Nu
     두 결과가 일치하는 경우 이를 정상으로 판단하고, 전체 결과를 기반으로 Accuracy를 산출합니다.
     본 Project에서는 전체 100개 sample 중 99개가 일치하여, 99%의 정확도를 보임을 확인하였습니다.
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_36.png" width="400"/>
+
+<div align="left">  
+
 etc. 추가적으로 확인해 볼 사항
 
 1. test_data가 없는 경우에도, Warning이 발생하지 않는 경우
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_37.png" width="400"/>
+
+<div align="left">  
 ​
-
-
-    top_sim.v의 testbench는 MaxTestSamples 값을 기준으로 for-loop 형태로 동작하며, 각 iteration마다 test data 파일명을 생성하여 처리를 시도합니다.
-
-    이 과정에서 파일 존재 여부($fopen 성공 여부)를 별도로 확인하지 않기 때문에, test data 파일이 존재하지 않더라도 Simulation은 중단되지 않습니다.
-    
+    top_sim.v의 testbench는 MaxTestSamples 값을 기준으로 for-loop 형태로 동작하며, 각 iteration마다 test data 파일명을 생성하여 처리를 시도합니다. 이 과정에서 파일 존재 여부($fopen 성공 여부)를 별도로 확인하지 않기 때문에, test data 파일이 존재하지 않더라도 Simulation은 중단되지 않습니다.
     그 결과 ModelSim 상에서는 별도의 Warning 없이 Simulation이 진행될 수 있습니다.
     
 2. Simulation 시, 발생하는 Warning
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_38.png" width="400"/>
 
-Simulation 중 출력되는 Warning은 주로 모듈 인스턴스화 과정에서
+<div align="left">  
 
-port width와 연결된 signal width가 서로 일치하지 않을 때 발생합니다.
-
-​
-
-ModelSim은 이러한 경우 자동으로 bit-width를 조정하여 Simulation을 진행합니다.
-
-​
-
-본 Project에서는 해당 Warning이 최종 결과 및 Accuracy에는 영향을 주지 않았습니다.
+    Simulation 중 출력되는 Warning은 주로 모듈 인스턴스화 과정에서 port width와 연결된 signal width가 서로 일치하지 않을 때 발생합니다.
+    ModelSim은 이러한 경우 자동으로 bit-width를 조정하여 Simulation을 진행합니다.
+    본 Project에서는 해당 Warning이 최종 결과 및 Accuracy에는 영향을 주지 않았습니다.
