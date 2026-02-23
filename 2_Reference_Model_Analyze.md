@@ -241,35 +241,35 @@ H/W Architecture
 
 ​
 
-입력 데이터 수신
++ 입력 데이터 수신
 
-Testbench는 axis_in_data와 axis_in_data_valid를 통해 입력 Pixel 데이터를 전달.
+    + Testbench는 axis_in_data와 axis_in_data_valid를 통해 입력 Pixel 데이터를 전달.
 
-axis_in_data_valid가 assert된 구간이 Layer 1 연산의 입력 window로 동작.
-
-​
-
-Layer 1 연산 
-
-Layer_1은 입력 stream(axis_in_data, axis_in_data_valid)을 받아 Fully-Connection 연산을 수행
-
-연산결과는 vector 형태(x1_out)로 생성 → o1_valid가 output vector의 유효 시점을 알림.
+    - axis_in_data_valid가 assert된 구간이 Layer 1 연산의 입력 window로 동작.
 
 ​
 
-Controller (Layer 출력 직렬화: vector → scalar)
++ Layer 1 연산 
 
-각 Layer 출력은 vector 형태이므로, 다음 Layer에 입력으로 전달하기 위해 직렬화(serialize).
+    + Layer_1은 입력 stream(axis_in_data, axis_in_data_valid)을 받아 Fully-Connection 연산을 수행
+    
+    - 연산결과는 vector 형태(x1_out)로 생성 → o1_valid가 output vector의 유효 시점을 알림.
 
-이를 위해 각 Layer 뒤에는 IDLE/SEND 2-state FSM이 배치.
+​
 
-IDLE
++ Controller (Layer 출력 직렬화: vector → scalar)
 
-oX_valid[0]가 assert되면, Layer 출력 vector(xX_out)을 holdData_X에 저장
++ 각 Layer 출력은 vector 형태이므로, 다음 Layer에 입력으로 전달하기 위해 직렬화(serialize).
 
-상태를 SEND로 전환
+- 이를 위해 각 Layer 뒤에는 IDLE/SEND 2-state FSM이 배치.
 
-SEND
+    + IDLE
+
+    - oX_valid[0]가 assert되면, Layer 출력 vector(xX_out)을 holdData_X에 저장
+
+    - 상태를 SEND로 전환
+
+    -SEND
 
 holdData_X의 LSB(dataWidth)를 out_data_X로 출력
 
