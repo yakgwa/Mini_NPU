@@ -291,8 +291,6 @@
 
 ### Simulation Result
 
-<mark>Check Point !!</mark>
-
 <div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_80.png" width="400"/>
 
 <div align="left">
@@ -301,82 +299,41 @@
 
 <div align="left">
 
-- K_DIM / ACC_W:
+<mark>Check Point !!</mark>
 
-K_DIM은 행렬 곱 연산에서 A와 B가 공유하는 공통 차원(common dimension) 을 의미합니다. 
+- K_DIM / ACC_W : K_DIM은 행렬 곱 연산에서 A와 B가 공유하는 공통 차원(common dimension) 을 의미합니다. 즉, 각 출력 원소 C[r][c]는 k = 0 … K_DIM-1에 대해 A[r][k] * B[k][c]를 누적하여 계산되며, K_DIM은 이 누산 횟수를 결정합니다. ACC_W는 MAC 연산 과정에서 발생할 수 있는 bit growth를 고려하여 정의된 누산기(accumulator) bit width입니다. 
+    각 PE에서는 DATA_W-bit signed 입력 두 개를 곱하므로 곱셈 결과는 최대 2*DATA_W 비트를 요구하며, 여기에 K_DIM번의 누산이 수행되므로 추가적인 bit growth이 발생합니다.
 
-즉, 각 출력 원소 C[r][c]는 k = 0 … K_DIM-1에 대해 A[r][k] * B[k][c]를 누적하여 계산되며, K_DIM은 이 누산 횟수를 결정합니다.
+        ACC_W = 2*DATA_W + log2(K_DIM)
 
-​
+- FSM : typedef enum을 사용하여 컨트롤러의 상태(state)를 정의하고, 현재 상태(state)와 다음 상태(next_state)를 선언합니다. 본 FSM은 IDLE, RUN, DONE_STATE의 세 가지 상태로 구성됩니다. 이후 case 문을 통해 각 상태에서의 전이 조건을 정의합니다.
 
-ACC_W는 MAC 연산 과정에서 발생할 수 있는 bit growth를 고려하여 정의된 누산기(accumulator) bit width입니다. 
-
-각 PE에서는 DATA_W-bit signed 입력 두 개를 곱하므로 곱셈 결과는 최대 2*DATA_W 비트를 요구하며, 
-
-여기에 K_DIM번의 누산이 수행되므로 추가적인 bit growth이 발생합니다.
-
-ACC_W = 2*DATA_W + log2(K_DIM)
-- FSM:
-
-typedef enum을 사용하여 컨트롤러의 상태(state)를 정의하고, 현재 상태(state)와 다음 상태(next_state)를 선언합니다. 
-
-본 FSM은 IDLE, RUN, DONE_STATE의 세 가지 상태로 구성됩니다.
-
-​
-
-이후 case 문을 통해 각 상태에서의 전이 조건을 정의합니다.
-
-IDLE : 연산 대기 상태로, i_start 신호가 asserted되면 RUN 상태로 전이합니다.
-
-RUN : systolic array에 대한 데이터 주입 및 연산이 진행되며, 
-
-    내부 counter가 설정된 연산 사이클 수(CALC_CYCLES)에 도달하면 DONE_STATE로 전이합니다.
-
-** CALC_CYCLES = ROWS + COLS + K_DIM + 2는 정확한 최소 cycle 수를 수학적으로 계산한 값이라기보다는,
-
-데이터 주입 구간(K_DIM), row/column 방향 데이터 propagataion delay(ROWS, COLS), 그리고 PE 내부 pipeline 및 flush 구간을 고려한 보수적인 완료 기준
-
-DONE_STATE : 연산이 완료된 상태를 유지하며, i_start가 deasserted되면 다음 연산을 위해 다시 IDLE 상태로 복귀합니다.
-
-​
+    - IDLE : 연산 대기 상태로, i_start 신호가 asserted되면 RUN 상태로 전이합니다.
+    
+    - RUN : systolic array에 대한 데이터 주입 및 연산이 진행되며, 내부 counter가 설정된 연산 사이클 수(CALC_CYCLES)에 도달하면 DONE_STATE로 전이합니다.(CALC_CYCLES = ROWS + COLS + K_DIM + 2는 정확한 최소 cycle 수를 수학적으로 계산한 값이라기보다는,데이터 주입 구간(K_DIM), row/column 방향 데이터 propagataion delay(ROWS, COLS), 그리고 PE 내부 pipeline 및 flush 구간을 고려한 보수적인 완료 기준)
+    
+    - DONE_STATE : 연산이 완료된 상태를 유지하며, i_start가 deasserted되면 다음 연산을 위해 다시 IDLE 상태로 복귀합니다.
 
 - Input buffer Latching:
 
-연산 도중 상위 모듈 또는 TB에서 i_mat_a, i_mat_b 값이 변경되더라도 내부 연산이 영향을 받지 않도록, 
+    연산 도중 상위 모듈 또는 TB에서 i_mat_a, i_mat_b 값이 변경되더라도 내부 연산이 영향을 받지 않도록, controller는 연산 시작 시점에 입력 행렬을 내부 buffer(latched_mat_a, latched_mat_b)로 캡처합니다. 
 
-controller는 연산 시작 시점에 입력 행렬을 내부 buffer(latched_mat_a, latched_mat_b)로 캡처합니다. 
+          always_ff @(posedge clk) begin
+            if (state == IDLE && i_start) begin
+              latched_mat_a <= i_mat_a;
+              latched_mat_b <= i_mat_b;
+            end
+          end
+  
+구체적으로 IDLE 상태에서 i_start가 asserted되는 순간 입력을 1회 latch하며, 이후 RUN 상태에서는 외부 입력이 아니라 latch된 buffer만을 참조하여 데이터 stream을 생성합니다. 이 방식으로 입력 데이터의 일관성을 보장하고, transaction 단위로 안정적인 연산을 수행할 수 있도록 합니다.
 
-  always_ff @(posedge clk) begin
-    if (state == IDLE && i_start) begin
-      latched_mat_a <= i_mat_a;
-      latched_mat_b <= i_mat_b;
-    end
-  end
-구체적으로 IDLE 상태에서 i_start가 asserted되는 순간 입력을 1회 latch하며, 
+​- Data Skewing : 2-D systolic array는 각 PE에서 A[r][k]와 B[k][c]가 동일한 cycle에 도달하도록 입력 stream에 skew를 적용해야 합니다. 이를 위해 controller 내부 counter와 row/con 인덱스를 이용하여, 각 cycle에 array에 주입할 원소를 선택합니다.
 
-이후 RUN 상태에서는 외부 입력이 아니라 latch된 buffer만을 참조하여 데이터 stream을 생성합니다. 
+    - A 주입: k = cnt - r로 계산하여, k가 유효 범위(0 ≤ k < K_DIM)일 때 latched_mat_a[r][k]를 array_a_in[r]로 출력합니다. 유효 범위를 벗어나면 0을 주입하여 padding을 수행합니다.
+    
+    - B 주입: k = cnt - c로 계산하여, k가 유효 범위일 때 latched_mat_b[k][c]를 array_b_in[c]로 출력합니다. 
 
-​
-
-이 방식으로 입력 데이터의 일관성을 보장하고, transaction 단위로 안정적인 연산을 수행할 수 있도록 합니다.
-
-​
-
-- Data Skewing:
-
-2-D systolic array는 각 PE에서 A[r][k]와 B[k][c]가 동일한 cycle에 도달하도록 입력 stream에 skew를 적용해야 합니다. 
-
-​
-
-이를 위해 controller 내부 counter와 row/con 인덱스를 이용하여, 각 cycle에 array에 주입할 원소를 선택합니다.
-
-A 주입: k = cnt - r로 계산하여, k가 유효 범위(0 ≤ k < K_DIM)일 때 latched_mat_a[r][k]를 array_a_in[r]로 출력합니다. 
-
-   유효 범위를 벗어나면 0을 주입하여 padding을 수행합니다.
-
-B 주입: k = cnt - c로 계산하여, k가 유효 범위일 때 latched_mat_b[k][c]를 array_b_in[c]로 출력합니다. 
-
-   마찬가지로 유효 범위를 벗어나면 0을 주입합니다.
+        마찬가지로 유효 범위를 벗어나면 0을 주입합니다.
 
 //==========================================================
 // Data Skewing Logic
