@@ -747,175 +747,127 @@ write_seq_cnt == 16이 되면, 현재 group이 마지막 group인지 여부를
 
 5차 simulation 이후, 예상과 같이 Layer 2의 output이 정상적으로 Layer 3의 input으로 전달되는 것을 확인하였습니다.
 
-​
+다만 4차 simulation에서 확한 input과 weight 간 mismatch의 영향으로, Layer 2와 Layer 3에서는 여전히 X(Unknown)이 발생하고 있음을 확인할 수 있습니다.
 
-다만 4차 simulation에서 확한 input과 weight 간 mismatch의 영향으로, 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_94.png" width="400"/>
 
-Layer 2와 Layer 3에서는 여전히 X(Unknown)이 발생하고 있음을 확인할 수 있습니다.
+<div align="left">
 
+MAC 연산의 첫 cycle을 기준으로 분석한 결과, 원인은 weight path와 input path 간의 latency 정렬에 있음을 확인하였습니다. Weight는 Weight_Memory에서 posedge clk 기준으로 read되므로 Weight_Bank 출력(w_bank_out)에 1-cycle latency가 존재하는 반면, input은 k_cnt == 0 시점부터 즉시 Systolic_Array로 공급되어 두 경로 간 timing mismatch가 발생하였습니다. 
 
-MAC 연산의 첫 cycle을 기준으로 분석한 결과, 원인은 weight path와 input path 간의 latency 정렬에 있음을 확인하였습니다.
+​이로 인해 초기 MAC 연산에서 input–weight 불일치가 발생하고, 해당 mismatch가 accumulator 및 이후 pipeline stage로 전파되면서 X(Unknown)가 생성되었습니다.
 
-​
+​이를 해결하기 위해 Global_Buffer에서 read된 input data에 대해 1-cycle pipeline register(buf_r_data_d1)를 추가하여, input path에도 weight path와 동일한 latency를 부여하였습니다. 
 
-Weight는 Weight_Memory에서 posedge clk 기준으로 read되므로 Weight_Bank 출력(w_bank_out)에 1-cycle latency가 
+​수정된 코드에서는 Layer 2 및 Layer 3 연산 구간에서 direct buffer output(buf_r_data) 대신 지연된 버전(buf_r_data_d1)을 row input으로 사용합니다.
 
-존재하는 반면, input은 k_cnt == 0 시점부터 즉시 Systolic_Array로 공급되어 두 경로 간 timing mismatch가 발생하였습니다. 
+        // Global_Buffer read-data 1-cycle latency (align with Weight_Bank latency)
+        reg [dataWidth-1:0] buf_r_data_d1 [3:0];
+        
+        always @(posedge clk) begin
+            for (rr = 0; rr < 4; rr = rr + 1) begin
+                buf_r_data_d1[rr] <= buf_r_data[rr];
+            end
+        end
 
-​
+이와 같이 weight path(Weight_Memory → Weight_Bank)와 input path(Global_Buffer → buf_r_data_d1)에 동일한 pipeline depth를 적용함으로써, Systolic_Array에서 input과 weight가 동일한 k_cnt 기준으로 time-aligned되어 MAC 연산이 수행되도록 수정하였습니다.
 
-이로 인해 초기 MAC 연산에서 input–weight 불일치가 발생하고, 
-
-해당 mismatch가 accumulator 및 이후 pipeline stage로 전파되면서 X(Unknown)가 생성되었습니다.
-
-​
-
-이를 해결하기 위해 Global_Buffer에서 read된 input data에 대해 1-cycle pipeline register(buf_r_data_d1)를 추가하여, 
-
-input path에도 weight path와 동일한 latency를 부여하였습니다. 
-
-​
-
-수정된 코드에서는 Layer 2 및 Layer 3 연산 구간에서 direct buffer output(buf_r_data) 대신 지연된 버전(buf_r_data_d1)을 
-
-row input으로 사용합니다.
-
-// Global_Buffer read-data 1-cycle latency (align with Weight_Bank latency)
-reg [dataWidth-1:0] buf_r_data_d1 [3:0];
-
-always @(posedge clk) begin
-    for (rr = 0; rr < 4; rr = rr + 1) begin
-        buf_r_data_d1[rr] <= buf_r_data[rr];
-    end
-end
-이와 같이 weight path(Weight_Memory → Weight_Bank)와 input path(Global_Buffer → buf_r_data_d1)에 
-
-동일한 pipeline depth를 적용함으로써, 
-
-Systolic_Array에서 input과 weight가 동일한 k_cnt 기준으로 time-aligned되어 MAC 연산이 수행되도록 수정하였습니다.
+​추가적으로 TB Debug Monitor에서도 1-cycle latency를 고려하여 monitoring 되도록 코드를 수정하였습니다.(최종 TB 코드 참고)
 
 ​
 
-추가적으로 TB Debug Monitor에서도 1-cycle latency를 고려하여 monitoring 되도록 코드를 수정하였습니다.
-
-(** 최종 TB 코드 참고)
-
-​
-
-Proposed Model - 7th Simulation
+### Proposed Model - 7th Simulation
 
 7회차 simulation에서 Layer 2의 연산 결과가 Golden value와 일치함을 확인하였습니다.
-
 또한 Layer 3에서도 output이 정상적으로 생성되었으나, 최종 결과와는 아직 일치하지 않음을 확인하였습니다.
 
-
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_95.png" width="400"/>
 
 Layer 2 결과
 
+<div align="left">
 
-Layer 3
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_96.png" width="400"/>
+
+Layer 3 결과
+
+<div align="left">
 
 기대값이 7임에도 불구하고, 최종 결과가 6에 대해 127로 출력되는 현상을 확인하였습니다.
 
-​
+​이를 해결하기 위해 연산 경로를 상세히 분석한 결과, weight.mif에 정의된 값과 실제 MAC 연산 과정에서 사용되는 weight 값이 일치하지 않는 구간이 존재함을 확인하였습니다. 이로 인해 MAC 연산 초기에 예상과 다른 곱셈 결과가 발생하였고, 해당 오차가 누적되면서 최종 결과에 영향을 미치고 있었습니다.
 
-이를 해결하기 위해 연산 경로를 상세히 분석한 결과,
-
-weight.mif에 정의된 값과 실제 MAC 연산 과정에서 사용되는 weight 값이 일치하지 않는 구간이 존재함을 확인하였습니다.
+​문제 분석 과정에서 특히 overflow 처리 방식에 주목하였으며, 기존 구현에서는 MAC 누산 과정 및 bias add 이후 단계에서 overflow 발생 시 상위 bit를 단순히 truncation하는 방식으로 처리하고 있음을 확인하였습니다.
 
 ​
 
-이로 인해 MAC 연산 초기에 예상과 다른 곱셈 결과가 발생하였고, 해당 오차가 누적되면서 최종 결과에 영향을 미치고 있었습니다.
+### Activation_Unit.sv
 
-​
+            always @(*) begin
+                // eliminate MSB(overflow bit) by truncation
+                // -> overflow 시 sign bit가 잘려 wrap-around 발생
+                sum_saturated = bias_add_res[2*dataWidth-1:0];
+            end
 
-문제 분석 과정에서 특히 overflow 처리 방식에 주목하였으며,
+이 경우 overflow가 발생하면 MSB가 잘리면서 wrap-around가 발생하고, 결과적으로 부호가 뒤집히거나 값이 크게 왜곡되는 문제가 발생할 수 있습니다.
 
-기존 구현에서는 MAC 누산 과정 및 bias add 이후 단계에서 overflow 발생 시 상위 bit를 단순히 truncation하는 방식으로 
+​초기에는 Activation 단계에서 발생하는 overflow가 원인일 가능성을 고려하여, bias add 이후의 결과에 대해 saturation 처리를 적용하였습니다.
 
-처리하고 있음을 확인하였습니다.
+            // ================================================================
+            // [MODIFIED CODE] (saturating add to prevent wrap-around)
+            // ----------------------------------------------------------------
+            // Saturating add for psum + bias
+            //
+            // psum_in과 bias_in은 W-bit signed 값이며,
+            // 더한 결과는 최악의 경우 W+1 bit가 필요함.
+            //
+            // 기존 truncate 방식은 overflow 시 MSB가 잘려
+            // wrap-around(부호 뒤집힘)가 발생할 수 있음.
+            //
+            // 이를 방지하기 위해 결과를 W-bit signed 범위로
+            // saturation 처리함.
+            //
+            // bias_add_res : (W+1)-bit full-precision sum
+            // sum_saturated: W-bit saturated result
+            // ----------------------------------------------------------------
+            localparam int W = 2*dataWidth;                         // psum/bias 입력 폭
+        
+            localparam signed [W-1:0] SAT_MAX = (1 <<< (W-1)) - 1;  // 최대값 (W-bit signed)
+            localparam signed [W-1:0] SAT_MIN = - (1 <<< (W-1));    // 최소값 (W-bit signed)
+        
+            // saturation logic (wrap-around 방지)
+            always @(*) begin
+                if (bias_add_res > SAT_MAX)
+                    sum_saturated = SAT_MAX;        // positive overflow
+                else if (bias_add_res < SAT_MIN)
+                    sum_saturated = SAT_MIN;        // negative overflow
+                else
+                    sum_saturated = bias_add_res[W-1:0]; // 정상 범위
+            end
+            // ----------------------------------------------------------------
 
-​
+그러나 Activation_Unit에서의 overflow 처리만으로는 문제가 완전히 해결되지 않았으며, 동일한 wrap-around 문제가 PE 내부의 accumulator 경로에서도 발생할 수 있음을 확인하였습니다.
 
-<Activation_Unit.sv>
+### PE.sv
 
-    always @(*) begin
-        // eliminate MSB(overflow bit) by truncation
-        // -> overflow 시 sign bit가 잘려 wrap-around 발생
-        sum_saturated = bias_add_res[2*dataWidth-1:0];
-    end
-이 경우 overflow가 발생하면 MSB가 잘리면서 wrap-around가 발생하고, 
+            assign full_sum  = {sum[W-1], sum} + {mul[W-1], mul};
+        
+            always @(posedge clk) begin
+                if (rst) begin
+                    sum <= '0;
+                end else if (en) begin
+                    if (full_sum > SAT_MAX)
+                        sum <= SAT_MAX;      // positive overflow clamp
+                    else if (full_sum < SAT_MIN)
+                        sum <= SAT_MIN;      // negative overflow clamp
+                    else
+                        sum <= full_sum[W-1:0];
+                end
+            end
 
-결과적으로 부호가 뒤집히거나 값이 크게 왜곡되는 문제가 발생할 수 있습니다.
+이에 따라 Activation_Unit뿐만 아니라 PE 내부의 accumulator 경로에도 동일하게 saturation 기반 overflow 처리를 적용하였으며, 이를 통해 MAC 누산 과정 전반에서 wrap-around로 인한 값 왜곡을 방지하도록 수정하였습니다.
 
-​
-
-초기에는 Activation 단계에서 발생하는 overflow가 원인일 가능성을 고려하여,
-
-bias add 이후의 결과에 대해 saturation 처리를 적용하였습니다.
-
-    // ================================================================
-    // [MODIFIED CODE] (saturating add to prevent wrap-around)
-    // ----------------------------------------------------------------
-    // Saturating add for psum + bias
-    //
-    // psum_in과 bias_in은 W-bit signed 값이며,
-    // 더한 결과는 최악의 경우 W+1 bit가 필요함.
-    //
-    // 기존 truncate 방식은 overflow 시 MSB가 잘려
-    // wrap-around(부호 뒤집힘)가 발생할 수 있음.
-    //
-    // 이를 방지하기 위해 결과를 W-bit signed 범위로
-    // saturation 처리함.
-    //
-    // bias_add_res : (W+1)-bit full-precision sum
-    // sum_saturated: W-bit saturated result
-    // ----------------------------------------------------------------
-    localparam int W = 2*dataWidth;                         // psum/bias 입력 폭
-
-    localparam signed [W-1:0] SAT_MAX = (1 <<< (W-1)) - 1;  // 최대값 (W-bit signed)
-    localparam signed [W-1:0] SAT_MIN = - (1 <<< (W-1));    // 최소값 (W-bit signed)
-
-    // saturation logic (wrap-around 방지)
-    always @(*) begin
-        if (bias_add_res > SAT_MAX)
-            sum_saturated = SAT_MAX;        // positive overflow
-        else if (bias_add_res < SAT_MIN)
-            sum_saturated = SAT_MIN;        // negative overflow
-        else
-            sum_saturated = bias_add_res[W-1:0]; // 정상 범위
-    end
-    // ----------------------------------------------------------------
-그러나 Activation_Unit에서의 overflow 처리만으로는 문제가 완전히 해결되지 않았으며,
-
-동일한 wrap-around 문제가 PE 내부의 accumulator 경로에서도 발생할 수 있음을 확인하였습니다.
-
-​
-
-<PE.sv>
-
-    assign full_sum  = {sum[W-1], sum} + {mul[W-1], mul};
-
-    always @(posedge clk) begin
-        if (rst) begin
-            sum <= '0;
-        end else if (en) begin
-            if (full_sum > SAT_MAX)
-                sum <= SAT_MAX;      // positive overflow clamp
-            else if (full_sum < SAT_MIN)
-                sum <= SAT_MIN;      // negative overflow clamp
-            else
-                sum <= full_sum[W-1:0];
-        end
-    end
-이에 따라 Activation_Unit뿐만 아니라 PE 내부의 accumulator 경로에도 동일하게 saturation 기반 overflow 처리를 적용하였으며,
-
-이를 통해 MAC 누산 과정 전반에서 wrap-around로 인한 값 왜곡을 방지하도록 수정하였습니다.
-
-​
-
-Proposed Model - 8th Simulation
-
+### Proposed Model - 8th Simulation
 
 ============================================================
 [TB] Layer 1 Calculation Complete!
@@ -952,18 +904,21 @@ Proposed Model - 8th Simulation
 
 7차 Simulation에서 코드 수정을 반영한 결과, 최종적으로 PASS함을 확인하였습니다.
 
-향후 Ver.1 → Ver.2 개선점
+### 향후 Ver.1 → Ver.2 개선점
 
 1. 다중 Sample 입력 처리 검증
 
 Ver.1에서는 단일 sample뿐만 아니라 최대 4개의 sample을 병렬로 처리할 수 있도록 TB 구조를 재설계하였습니다.
 
-첨부파일TB_Full_NPU_Top.sv파일 다운로드
+TB_Full_NPU_Top.sv파일
+
 실제로 Sample 4개에 대해서도 최종 classification 결과는 모두 PASS함을 확인하였습니다.
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_97.png" width="400"/>
+
+<div align="left">
 
 다만 Layer별 연산 과정을 debug하는 과정에서, 일부 intermediate value가 X(Unknown)으로 관측되는 문제가 확인되었습니다.
-
 
 ============================================================
 [TB] Layer 1 Calculation Complete! (sample0 only)
@@ -1038,39 +993,16 @@ Ver.1에서는 단일 sample뿐만 아니라 최대 4개의 sample을 병렬로 
 ------------------------------------------------------------
 ============================================================
 $finish called at time : 68305 ns : File "C:/Users/mini9/Desktop/NPU/initial_v1/TB_Full_NPU_Top.sv" Line 202
-해당 현상은 최종 classification 결과에는 영향을 주지 않았으나,
 
-다중 sample 입력 시 Layer별 MAC 결과, accumulator 값, activation 출력 등
+해당 현상은 최종 classification 결과에는 영향을 주지 않았으나, 다중 sample 입력 시 Layer별 MAC 결과, accumulator 값, activation 출력 등 중간 연산 값 일부가 X(Unknown)으로 관측되는 문제가 확인되었습니다.
 
-중간 연산 값 일부가 X(Unknown)으로 관측되는 문제가 확인되었습니다.
+​따라서 Ver.2에서는 다중 sample 입력 조건에서도 Layer별 MAC 결과와 intermediate value가 X 없이 일관되게 관측되도록, DUT 및 Testbench 구성을 재정비할 필요가 있습니다.
 
-​
+​2. Ver.1 Compute 구조의 한계
 
-따라서 Ver.2에서는 다중 sample 입력 조건에서도 Layer별 MAC 결과와 intermediate value가 X 없이 일관되게 관측되도록,
+현재 Ver.1의 compute 구조는 전통적인 의미의 Systolic Array 구조라고 보기는 어렵습니다. Wavefront skew가 반영되지 않아, input과 weight가 동일 cycle에 모든 PE로 동시에 공급되며 연산이 병렬적으로 수행되는 SIMD 형태에 가까운 구조로 동작하기 때문입니다.
 
-DUT 및 Testbench 구성을 재정비할 필요가 있습니다.
+즉, row/column 방향으로 data가 cycle마다 이동하는 systolic dataflow 구조가 아니라, 동일 cycle에 분해된 input과 weight가 각 PE에 직접 전달되는 방식입니다.
 
-​
-
-2. Ver.1 Compute 구조의 한계
-
-현재 Ver.1의 compute 구조는 전통적인 의미의 Systolic Array 구조라고 보기는 어렵습니다.
-
-​
-
-Wavefront skew가 반영되지 않아, input과 weight가 동일 cycle에 모든 PE로 동시에 공급되며
-
-연산이 병렬적으로 수행되는 SIMD 형태에 가까운 구조로 동작하기 때문입니다.
-
-​
-
-즉, row/column 방향으로 data가 cycle마다 이동하는 systolic dataflow 구조가 아니라,
-
-동일 cycle에 분해된 input과 weight가 각 PE에 직접 전달되는 방식입니다.
-
-​
-
-Ver.2에서는 input과 weight 경로에 cycle 단위 data skew(wavefront propagation)를 도입하여,
-
-각 PE가 시간적으로 offset된 data를 처리하도록 구성함으로써 보다 전형적인 Systolic Array 구조로 개선할 계획입니다.
+Ver.2에서는 input과 weight 경로에 cycle 단위 data skew(wavefront propagation)를 도입하여, 각 PE가 시간적으로 offset된 data를 처리하도록 구성함으로써 보다 전형적인 Systolic Array 구조로 개선할 계획입니다.
 
