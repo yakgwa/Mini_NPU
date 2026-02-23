@@ -11,6 +11,7 @@ Directory 내 Python 폴더로 이동하면 여러 Python 스크립트가 존재
 genTestData.py는 test data를 생성하는 스크립트이며, 해당 파일을 열어보면 가장 먼저 출력 경로를 설정하는 부분이 확인됩니다.
 
   outputPath = "../CNN-MNIST-Arty-Z7/CNN-MNIST-Arty-Z7.sim/sim_1/behav/xsim/"
+  
   headerFilePath = "../CNN-MNIST-Arty-Z7/CNN-MNIST-Arty-Z7.sim/sim_1/behav/xsim/"
 ​
 
