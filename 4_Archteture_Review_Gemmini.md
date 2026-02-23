@@ -70,12 +70,13 @@ Systolic array는 2-level hierarchy로 구성됩니다.
 
 각 tile은 fully combinational 구조이며, tile들로 구성된 mesh 사이에는 pipeline registers가 삽입됩니다. ​
 
-​
+​이러한 구조를 통해 tile 내부 연산과 tile 간 데이터 전달이 분리됩니다.
 
-이러한 구조를 통해 tile 내부 연산과 tile 간 데이터 전달이 분리됩니다.
-
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_41.png" width="400"/>
 
 Dataflow parameters (dataflow)
+
+<div align="left">
 
 Gemmini의 systolic array가 output-stationary(OS), weight-stationary(WS) 중 어떤 dataflow를 사용할지 결정합니다. 
 
