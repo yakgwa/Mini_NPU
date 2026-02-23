@@ -44,17 +44,17 @@
 
 이를 시각적으로 나타내면 다음과 같습니다. C = A × W 연산 시, Input과 Weight가 만나 생성되는 결과 행렬 C의 구조입니다.
 
-<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_48.jpg" width="400"/>
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_48.png" width="400"/>
 
 <div align="left">
 
-<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_49.jpg" width="400"/>
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_49.png" width="400"/>
 
 <div align="left">
 
 ### OS
 
-<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_50.jpg" width="400"/>
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_50.png" width="400"/>
 
 <div align="left">
 
