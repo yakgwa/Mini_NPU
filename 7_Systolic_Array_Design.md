@@ -239,17 +239,13 @@
 <mark>Check Point !!/<mark>
 - data width: ACC_W는 기본적으로 DATA_W * 2로 정의합니다. 이는 입력 a와 b의 곱셈 결과 bit width가 입력 bit width의 두 배가 되기 때문입니다. 그러나 곱셈 결과를 여러 번 누산(accumulation)하는 구조에서는 추가적인 bit width 고려가 필요합니다.
 
-누산 횟수가 증가할수록 중간 합의 최대값이 커지며, 누산 과정에서 overflow가 발생할 수 있습니다. 따라서 실제 연산기 수준의 설계에서는 단순히 ACC_W = DATA_W * 2로는 충분하지 않습니다. 누산 동작을 안정적으로 지원하기 위해 accumulator bit width를 더 크게 설정합니다.
+    누산 횟수가 증가할수록 중간 합의 최대값이 커지며, 누산 과정에서 overflow가 발생할 수 있습니다. 따라서 실제 연산기 수준의 설계에서는 단순히 ACC_W = DATA_W * 2로는 충분하지 않습니다. 누산 동작을 안정적으로 지원하기 위해 accumulator bit width를 더 크게 설정합니다.
 
-​예를 들어 DATA_W = 8인 경우, ACC_W = 16 대신 2의 거듭제곱 단위인 ACC_W = 32로 설정하여 누산 과정에서의 overflow 여유를 확보합니다.
+    ​예를 들어 DATA_W = 8인 경우, ACC_W = 16 대신 2의 거듭제곱 단위인 ACC_W = 32로 설정하여 누산 과정에서의 overflow 여유를 확보합니다.
 
 - signed / unsigned:
 
-연산을 수행하는 과정에서 stimulus는 음수 값을 가질 수 있습니다.
-
-이때 signal이 unsigned로 선언되어 있을 경우, 동일한 bit pattern이라도 값이 양수로 해석되어 
-
-연산 결과가 의도와 다르게 계산될 수 있습니다.
+    연산을 수행하는 과정에서 stimulus는 음수 값을 가질 수 있습니다. 이때 signal이 unsigned로 선언되어 있을 경우, 동일한 bit pattern이라도 값이 양수로 해석되어 연산 결과가 의도와 다르게 계산될 수 있습니다.
 
 
 
