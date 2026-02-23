@@ -32,8 +32,8 @@ Windows CMD 또는 PowerShell을 실행합니다.
 
 2. Python 스크립트가 있는 디렉터리로 이동
 
-      cd C:\NPU_study\CNN-Handwritten-Digit-MNIST-main\Network\Vivado\Python
-      (※ genTestData.py가 위치한 정확한 경로로 이동)
+          cd C:\NPU_study\CNN-Handwritten-Digit-MNIST-main\Network\Vivado\Python
+          (※ genTestData.py가 위치한 정확한 경로로 이동)
   
 3. 스크립트 실행
 
