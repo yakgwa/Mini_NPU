@@ -49,7 +49,8 @@ GPU와 비교했을 때 TPU는 inference workload에 최적화된 연산 구조�
 
 ​TPU의 핵심은 65,536개의 8-bit MAC으로 구성된 Matrix Multiply Unit입니다. 이를 통해 최대 92 TOPS(Tera Operations Per Second)의 연산 성능을 제공합니다.
 
-<div align="center"> <img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_2.jpg" width="400"/> <br/>
+<div align="center"> <img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_2.jpg" width="400"/>
+
 
 <div align="left">
 Multiply와 Adder, Accumulate로 이루어진 MAC 구조로 TPU는 deterministic execution model을 사용하며, 99th-percentile response time(p99 latency) 요구사항에 더 잘 맞는 구조입니다.
