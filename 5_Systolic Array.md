@@ -16,6 +16,8 @@
 
 <div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_58.jpg" width="400"/>
 
+<div align="left"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_47.jpg" width="400"/><div align="right"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_58.jpg" width="400"/>
+
 <div align="left">
 
 ### Output Stationary (OS) 구조의 핵심
