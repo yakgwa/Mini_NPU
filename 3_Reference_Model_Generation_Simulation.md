@@ -28,7 +28,7 @@ genTestData.py는 test data를 생성하는 스크립트이며, 해당 파일을
 
 1. Command Prompt 실행
 
-Windows CMD 또는 PowerShell을 실행합니다.
+    Windows CMD 또는 PowerShell을 실행합니다.
 
 2. Python 스크립트가 있는 디렉터리로 이동
 
@@ -41,9 +41,9 @@ Windows CMD 또는 PowerShell을 실행합니다.
   
 ※ numpy Error 발생 시
 
-만약 해당 오류가 발생한다면, 이는 Python 실행 환경에 NumPy 라이브러리가 설치되어 있지 않을 경우에 발생합니다.
+    만약 해당 오류가 발생한다면, 이는 Python 실행 환경에 NumPy 라이브러리가 설치되어 있지 않을 경우에 발생합니다.
 
-genTestData.py는 Reference Model 기반의 연산 및 test data 생성을 위해 NumPy를 사용하므로, 사전에 해당 라이브러리가 설치되어 있어야 합니다.
+    genTestData.py는 Reference Model 기반의 연산 및 test data 생성을 위해 NumPy를 사용하므로, 사전에 해당 라이브러리가 설치되어 있어야 합니다.
 
       Traceback (most recent call last):
         File "C:\NPU_study\CNN-Handwritten-Digit-MNIST-main\Network\Vivado\Python\genTestData.py", line 11, in <module>
