@@ -363,104 +363,75 @@ H/W Architecture
 
 ​
 
-Weight_Memory (stream 대응)
++ Weight_Memory (stream 대응)
 
-ren은 myinputValid에 직접 연결되어, 입력이 valid인 cycle에서만 Weight Memory read 수행.
-
-read address r_addr는 myinputValid가 유지되는 동안 매 cycle마다 1씩 증가.
-
-결과적으로 입력 index와 weight index가 cycle 단위로 1:1 대응되도록 정렬됨.
-
-​
-
-MAC 연산 및 Accumulation (valid 기반)
-
-입력은 myinputd로 1-cycle 지연되어 multiply 연산에 사용됨.
-
-multiply 연산: mul <= myinputd * w_out
-
-accumulate enable 조건: mux_valid = mult_valid
-
-mux_valid가 assert된 cycle에서만 sum <= sum + mul 수행.
-
-누적 과정에서 overflow 발생 시 saturation 처리 포함.
+    + ren은 myinputValid에 직접 연결되어, 입력이 valid인 cycle에서만 Weight Memory read 수행.
+    
+    - read address r_addr는 myinputValid가 유지되는 동안 매 cycle마다 1씩 증가.
+    
+    - 결과적으로 입력 index와 weight index가 cycle 단위로 1:1 대응되도록 정렬됨.
 
 ​
 
-Input 종료 검출 및 BiasAdd (단 1회)
++ MAC 연산 및 Accumulation (valid 기반)
 
-input 종료 조건은 length 신호가 아니라, valid falling edge 기반으로 판단됨.
-
-muxValid_f <= !mux_valid & muxValid_d
-
-종료 이벤트와 모든 weight 처리 완료 조건: (r_addr == numWeight) & muxValid_f
-
-위 조건에서 sum <= sum + bias 수행(1회).
-
-해당 시점에 sigValid 생성 후 outvalid로 전달.
-
-​
-
-Activation 선택 (compile-time)
-
-actType에 따라 activation 블록 결정(generate).
-
-sigmoid 설정 시 Sig_ROM 사용.
-
-그 외의 경우 ReLU 사용.
-
-activation 결과는 최종 출력 out으로 연결됨.
+    + 입력은 myinputd로 1-cycle 지연되어 multiply 연산에 사용됨.
+    
+    - multiply 연산: mul <= myinputd * w_out
+    
+    - accumulate enable 조건: mux_valid = mult_valid
+    
+    - mux_valid가 assert된 cycle에서만 sum <= sum + mul 수행.
+    
+    - 누적 과정에서 overflow 발생 시 saturation 처리 포함.
 
 ​
 
-한 줄 요약
++ Input 종료 검출 및 BiasAdd (단 1회)
 
-neuron은 입력 stream을 받아 weight memory 기반 dot-product 연산을 수행하고,
+    + input 종료 조건은 length 신호가 아니라, valid falling edge 기반으로 판단됨.
 
-valid 기반 누적(MAC)과 bias add를 거쳐 activation을 적용한 단일 출력 값을 생성하는 최소 연산 unit.
+        + muxValid_f <= !mux_valid & muxValid_d
 
-상위 Layer에서는 이러한 neuron 출력들을 모아 vector 형태로 구성함.
+    + 종료 이벤트와 모든 weight 처리 완료 조건: (r_addr == numWeight) & muxValid_f
 
-Summary
+        + 위 조건에서 sum <= sum + bias 수행(1회).
+
+    + 해당 시점에 sigValid 생성 후 outvalid로 전달.
+
++ Activation 선택 (compile-time)
+
+    + actType에 따라 activation 블록 결정(generate).
+    
+    - sigmoid 설정 시 Sig_ROM 사용.
+    
+    - 그 외의 경우 ReLU 사용.
+    
+    - activation 결과는 최종 출력 out으로 연결됨.
+
++ 한 줄 요약
+
+    + neuron은 입력 stream을 받아 weight memory 기반 dot-product 연산을 수행하고, valid 기반 누적(MAC)과 bias add를 거쳐 activation을 적용한 단일 출력 값을 생성하는 최소 연산 unit. 상위 Layer에서는 이러한 neuron 출력들을 모아 vector 형태로 구성함.
+
+## Summary
 
 본 글에서 손글씨 인식 Reference Model의 구조와 동작 흐름을 Testbench, Top module, Sub module(neuron) 순서로 정리했습니다.
 
-​
+Reference Model은 입력 stream 수신, FC 연산, vector 생성 및 serialization을 거쳐 다음 layer로 전달되는 명확한 파이프라인 구조를 가집니다.
 
-Reference Model은 입력 stream 수신, FC 연산, vector 생성 및 serialization을 거쳐 
+​다만 FC 기반 구조는 연산이 시간 축으로만 수행되는 1-D 방식이기 때문에 병렬 처리가 어렵고, 입력 차원이 커질수록 성능과 PPA 측면에서 비효율이 커집니다.
 
-다음 layer로 전달되는 명확한 파이프라인 구조를 가집니다.
-
-​
-
-다만 FC 기반 구조는 연산이 시간 축으로만 수행되는 1-D 방식이기 때문에 병렬 처리가 어렵고, 
-
-입력 차원이 커질수록 성능과 PPA 측면에서 비효율이 커집니다.
-
-​
-
-이후 내용에서는 이러한 한계를 개선하기 위해 Weight-Stationary 기반 Systolic Array 구조로 전환하고, 
+​이후 내용에서는 이러한 한계를 개선하기 위해 Weight-Stationary 기반 Systolic Array 구조로 전환하고, 
 
 이에 따른 dataflow와 H/W Architecture를 살펴보도록 하겠습니다.
 
-FC 기반 Reference Model의 Systolic Array 적용
+### FC 기반 Reference Model의 Systolic Array 적용
 
 다음으로 Reference Model의 기존 1-D Fully Connected(FC) 구조를2-D 구조인 Systolic Array 기반 구현으로 대체해 보겠습니다.
 
 Systolic Array의 개념과 연산 방식은 아래 링크와 뒤에 이어질 내용을 참고해 주세요.
 
-​
-
-https://blog.naver.com/mini9136/224141619115
-
-
- 
-[Mini-NPU] 개념 정리 (Neural Network, Systolic Array)
-Preliminarie 본격적인 Reference Model 분석에 앞서, 이후 내용을 이해하는 데 필요한 기본 개념들을 ...
-
-blog.naver.com
-
-왜 FC 대신 Systolic Array인가
+### 왜 FC 대신 Systolic Array인가
 
 기존 Reference Model의 Fully Connected(FC) 구조에서 각 neuron은 하나의 입력과 하나의 weight를 받아 곱셈을 수행하고,
 
