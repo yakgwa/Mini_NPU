@@ -192,255 +192,242 @@ Global_Buffer 동작 특성
 
 initial code에 대해 Simulation을 수행하면 연산 결과는 그림과 같이 출력됩니다.
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_86.png" width="400"/>
 
-현재 Layer 2와 Layer 3의 output이 X(Unknown) 상태로 나타나며, 
+<div align="left">
 
-Layer 1의 연산 결과 또한 Golden value와 일치하지 않음을 확인할 수 있습니다.
-
-​
+현재 Layer 2와 Layer 3의 output이 X(Unknown) 상태로 나타나며, Layer 1의 연산 결과 또한 Golden value와 일치하지 않음을 확인할 수 있습니다.
 
 이에 따라 Systolic_Array 구현 사례와 동일하게, unsigned로 선언된 부분을 signed로 수정한 뒤 simulation을 재진행하였습니다.
 
-​
+### Proposed Model - 2nd Simulation
 
-Proposed Model - 2nd Simulation
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_87.png" width="400"/>
 
+<div align="left">
 
-1차 시뮬레이션 이후, unsigned로 선언되어 있던 신호를 signed로 수정하여 재시뮬레이션을 수행하였으나, 
+1차 시뮬레이션 이후, unsigned로 선언되어 있던 신호를 signed로 수정하여 재시뮬레이션을 수행하였으나, Layer 1의 출력값은 여전히 Golden value와 불일치하였고, Layer 2 및 Layer 3의 출력은 X(Unknown) 상태로 관측되었습니다.
 
-Layer 1의 출력값은 여전히 Golden value와 불일치하였고, Layer 2 및 Layer 3의 출력은 X(Unknown) 상태로 관측되었습니다.
+​초기에는 waveform을 통해 실제 연산이 정상적으로 수행되는지를 확인하고자 하였으나, Pipe-line 및 다수의 내부 신호로 인해 waveform 기반 분석에는 한계가 있다고 판단하였습니다. 
 
-​
+​이에 따라 Testbench에 debug 및 monitor logic을 추가하여 각 단계의 연산 결과를 출력·검증하는 방식으로 분석을 진행하였습니다. (아래에 제시된 코드는 최종 Debug Monitor Logic입니다.)
 
-초기에는 waveform을 통해 실제 연산이 정상적으로 수행되는지를 확인하고자 하였으나, 
+### TB_NPU_Top.sv
 
-Pipe-line 및 다수의 내부 신호로 인해 waveform 기반 분석에는 한계가 있다고 판단하였습니다. 
-
-​
-
-이에 따라 Testbench에 debug 및 monitor logic을 추가하여 각 단계의 연산 결과를 출력·검증하는 방식으로 분석을 진행하였습니다.
-
-(아래에 제시된 코드는 최종 Debug Monitor Logic입니다.)
-
-​
-
-<TB_NPU_Top.sv>
-
-
-    ///////////////////////////////////////////////////////////////////
-    // --- Debug Monitor: L1/L2/L3 k-by-k + latency snapshots
-    //
-    // DUT 모델:
-    //  - L1: raw k=1..cur_input_len (TB는 원상복귀되어 k_cnt 그대로 투입)
-    //  - L2/L3: buf_r_data_d1(1-cycle) 때문에 유효 MAC은 raw k=2..cur_input_len+1
-    //
-    // 출력:
-    //  - L2/L3 MAC 로그는 k를 사람이 보기 쉽게 1..cur_input_len로 표시(k_eff=raw-1)
-    //  - raw k도 같이 표시
-    //  - flush 스냅샷은 1회만 출력
-    ///////////////////////////////////////////////////////////////////
-
-    localparam int FLUSH_CYC = 2;  // LAT1=1, LAT2=2 (TB 관측용)
-
-    // DUT state encoding
-    localparam int CALC_L1 = 1;
-    localparam int CALC_L2 = 3;
-    localparam int CALC_L3 = 5;
-
-    // ---- internal regs (L1) ----
-    reg     l1_debug_active;
-    integer l1_debug_cnt;
-    reg     l1_wait_final;
-    integer l1_flush_cnt;
-
-    // ---- internal regs (L2) ----
-    reg     l2_debug_active;
-    integer l2_debug_cnt;
-    reg     l2_wait_final;
-    integer l2_flush_cnt;
-
-    // ---- internal regs (L3) ----
-    reg     l3_debug_active;
-    integer l3_debug_cnt;
-    reg     l3_wait_final;
-    integer l3_flush_cnt;
-
-    always @(posedge clk) begin
-        if (!rst_n) begin
-            l1_debug_active <= 0; l1_debug_cnt <= 0; l1_wait_final <= 0; l1_flush_cnt <= 0;
-            l2_debug_active <= 0; l2_debug_cnt <= 0; l2_wait_final <= 0; l2_flush_cnt <= 0;
-            l3_debug_active <= 0; l3_debug_cnt <= 0; l3_wait_final <= 0; l3_flush_cnt <= 0;
-        end else begin
-
-            // ============================================================
-            // L1 (CALC_L1 = 1)
-            // ============================================================
-            if (prev_state != CALC_L1 && dut.state == CALC_L1 && dut.group_cnt == 0) begin
-                l1_debug_active <= 1'b1;
-                l1_debug_cnt    <= 0;
-                l1_wait_final   <= 1'b0;
-                l1_flush_cnt    <= 0;
-
-                $display("\n============================================================");
-                $display("[TB_DEBUG] Start L1 stream debug (grp0). Printing k=1..%0d", dut.cur_input_len);
-                $display("============================================================");
-            end
-
-            if (prev_state == CALC_L1 && dut.state != CALC_L1) begin
-                if (l1_debug_active) begin
-                    $display("============================================================");
-                    $display("[TB_DEBUG] End L1 MAC debug. Printed %0d lines", l1_debug_cnt);
-                    $display("============================================================\n");
-                end
-                l1_debug_active <= 1'b0;
-            end
-
-            if (l1_debug_active && dut.state == CALC_L1 && dut.group_cnt == 0 &&
-                dut.k_cnt >= 1 && dut.k_cnt <= dut.cur_input_len) begin
-
-                l1_debug_cnt <= l1_debug_cnt + 1;
-
-                $display("[L1_MAC] t=%0t k=%0d/%0d | in0=%0d w0=%0d | mul00=%0d acc00=%0d",
-                    $time, dut.k_cnt, dut.cur_input_len,
-                    $signed(dut.sys_row_in[`dataWidth-1:0]),
-                    $signed(dut.sys_col_in[`dataWidth-1:0]),
-                    $signed(dut.debug_mul_00),
-                    $signed(dut.pe_res_unpacked[0][0])
-                );
-
-                if (dut.k_cnt == dut.cur_input_len && !l1_wait_final) begin
-                    l1_wait_final <= 1'b1;
-                    l1_flush_cnt  <= 0;
-                end
-            end
-
-            if (l1_wait_final) begin
-                l1_flush_cnt <= l1_flush_cnt + 1;
-
-                if (l1_flush_cnt == (FLUSH_CYC-1)) begin
-                    $display("[L1_ACC_AFTER_LAT1] t=%0t | k_end=%0d +1 | acc00=%0d",
-                        $time, dut.cur_input_len,
-                        $signed(dut.pe_res_unpacked[0][0])
-                    );
-                end
-
-                if (l1_flush_cnt == FLUSH_CYC) begin
-                    $display("[L1_AU_AFTER_LAT2 ] t=%0t | k_end=%0d +2 | psum_sel=%0d bias_sel=%0d | sum=%0d sat=%0d | act=%0d | acc00=%0d | sel(img=%0d neu=%0d)",
-                        $time, dut.cur_input_len,
-                        $signed(dut.au_in_psum),
-                        $signed(dut.au_in_bias),
-                        $signed(dut.au.bias_add_res),
-                        $signed(dut.au.sum_saturated),
-                        $signed(dut.act_out_val),
-                        $signed(dut.pe_res_unpacked[0][0]),
-                        dut.in_img_idx, dut.in_neu_idx
-                    );
-                    l1_wait_final <= 1'b0;
-                end
-            end
-            // ============================================================
-            // L2 (CALC_L2 = 3) : 유효 MAC raw k=2..cur_input_len+1, 표시 k_eff=raw-1
-            // ============================================================
-            if (prev_state != CALC_L2 && dut.state == CALC_L2 && dut.group_cnt == 0) begin
-                l2_debug_active <= 1'b1;
-                l2_debug_cnt    <= 0;
-                l2_wait_final   <= 1'b0;
-                l2_flush_cnt    <= 0;
-
-                $display("\n============================================================");
-                $display("[TB_DEBUG] Start L2 stream debug (grp0). Printing k=1..%0d", dut.cur_input_len);
-                $display("============================================================");
-            end
-
-            if (prev_state == CALC_L2 && dut.state != CALC_L2) begin
-                if (l2_debug_active) begin
-                    $display("============================================================");
-                    $display("[TB_DEBUG] End L2 MAC debug. Printed %0d lines", l2_debug_cnt);
-                    $display("============================================================\n");
-                end
-                l2_debug_active <= 1'b0;
-            end
-
-            if (l2_debug_active && dut.state == CALC_L2 && dut.group_cnt == 0 &&
-                dut.k_cnt >= 2 && dut.k_cnt <= (dut.cur_input_len + 1)) begin
-
-                l2_debug_cnt <= l2_debug_cnt + 1;
-
-                $display("[L2_MAC] t=%0t k=%0d/%0d (raw=%0d) | in0=%0d w0=%0d | mul00=%0d acc00=%0d",
-                    $time,
-                    (dut.k_cnt-1), dut.cur_input_len, dut.k_cnt,
-                    $signed(dut.sys_row_in[`dataWidth-1:0]),
-                    $signed(dut.sys_col_in[`dataWidth-1:0]),
-                    $signed(dut.debug_mul_00),
-                    $signed(dut.pe_res_unpacked[0][0])
-                );
-
-                if (dut.k_cnt == (dut.cur_input_len + 1) && !l2_wait_final) begin
-                    l2_wait_final <= 1'b1;
-                    l2_flush_cnt  <= 0;
-                end
-            end
-
-            if (l2_wait_final) begin
-                l2_flush_cnt <= l2_flush_cnt + 1;
-
-                if (l2_flush_cnt == (FLUSH_CYC-1)) begin
-                    $display("[L2_ACC_AFTER_LAT1] t=%0t | k_end=%0d (raw_end=%0d) +1 | acc00=%0d",
-                        $time,
-                        dut.cur_input_len,
-                        (dut.cur_input_len + 1),
-                        $signed(dut.pe_res_unpacked[0][0])
-                    );
-                end
-
-                if (l2_flush_cnt == FLUSH_CYC) begin
-                    $display("[L2_AU_AFTER_LAT2 ] t=%0t | k_end=%0d (raw_end=%0d) +2 | psum_sel=%0d bias_sel=%0d | sum=%0d sat=%0d | act=%0d | acc00=%0d | sel(img=%0d neu=%0d)",
-                        $time,
-                        dut.cur_input_len,
-                        (dut.cur_input_len + 1),
-                        $signed(dut.au_in_psum),
-                        $signed(dut.au_in_bias),
-                        $signed(dut.au.bias_add_res),
-                        $signed(dut.au.sum_saturated),
-                        $signed(dut.act_out_val),
-                        $signed(dut.pe_res_unpacked[0][0]),
-                        dut.in_img_idx, dut.in_neu_idx
-                    );
-                    l2_wait_final <= 1'b0;
-                end
-            end
-
-
-            // ============================================================
-            // L3 (CALC_L3 = 5) : 유효 MAC raw k=2..cur_input_len+1, 표시 k_eff=raw-1
-            // ============================================================
-            if (prev_state != CALC_L3 && dut.state == CALC_L3 && dut.group_cnt == 0) begin
-                l3_debug_active <= 1'b1;
-                l3_debug_cnt    <= 0;
-                l3_wait_final   <= 1'b0;
-                l3_flush_cnt    <= 0;
-
-                $display("\n============================================================");
-                $display("[TB_DEBUG] Start L3 stream debug (grp0). Printing k=1..%0d", dut.cur_input_len);
-                $display("============================================================");
-            end
-
-            if (prev_state == CALC_L3 && dut.state != CALC_L3) begin
-                if (l3_debug_active) begin
-                    $display("============================================================");
-                    $display("[TB_DEBUG] End L3 MAC debug. Printed %0d lines", l3_debug_cnt);
-                    $display("============================================================\n");
-                end
-                l3_debug_active <= 1'b0;
-            end
-
-            if (l3_debug_active && dut.state == CALC_L3 && dut.group_cnt == 0 &&
-                dut.k_cnt >= 2 && dut.k_cnt <= (dut.cur_input_len + 1)) begin
-
-                l3_debug_cnt <= l3_debug_cnt + 1;
-
-                $display("[L3_MAC] t=%0t k=%0d/%0d (raw=%0d) | in0=%0d w0=%0d | mul00=%0d acc00=%0d",
+            ///////////////////////////////////////////////////////////////////
+            // --- Debug Monitor: L1/L2/L3 k-by-k + latency snapshots
+            //
+            // DUT 모델:
+            //  - L1: raw k=1..cur_input_len (TB는 원상복귀되어 k_cnt 그대로 투입)
+            //  - L2/L3: buf_r_data_d1(1-cycle) 때문에 유효 MAC은 raw k=2..cur_input_len+1
+            //
+            // 출력:
+            //  - L2/L3 MAC 로그는 k를 사람이 보기 쉽게 1..cur_input_len로 표시(k_eff=raw-1)
+            //  - raw k도 같이 표시
+            //  - flush 스냅샷은 1회만 출력
+            ///////////////////////////////////////////////////////////////////
         
+            localparam int FLUSH_CYC = 2;  // LAT1=1, LAT2=2 (TB 관측용)
+        
+            // DUT state encoding
+            localparam int CALC_L1 = 1;
+            localparam int CALC_L2 = 3;
+            localparam int CALC_L3 = 5;
+        
+            // ---- internal regs (L1) ----
+            reg     l1_debug_active;
+            integer l1_debug_cnt;
+            reg     l1_wait_final;
+            integer l1_flush_cnt;
+        
+            // ---- internal regs (L2) ----
+            reg     l2_debug_active;
+            integer l2_debug_cnt;
+            reg     l2_wait_final;
+            integer l2_flush_cnt;
+        
+            // ---- internal regs (L3) ----
+            reg     l3_debug_active;
+            integer l3_debug_cnt;
+            reg     l3_wait_final;
+            integer l3_flush_cnt;
+        
+            always @(posedge clk) begin
+                if (!rst_n) begin
+                    l1_debug_active <= 0; l1_debug_cnt <= 0; l1_wait_final <= 0; l1_flush_cnt <= 0;
+                    l2_debug_active <= 0; l2_debug_cnt <= 0; l2_wait_final <= 0; l2_flush_cnt <= 0;
+                    l3_debug_active <= 0; l3_debug_cnt <= 0; l3_wait_final <= 0; l3_flush_cnt <= 0;
+                end else begin
+        
+                    // ============================================================
+                    // L1 (CALC_L1 = 1)
+                    // ============================================================
+                    if (prev_state != CALC_L1 && dut.state == CALC_L1 && dut.group_cnt == 0) begin
+                        l1_debug_active <= 1'b1;
+                        l1_debug_cnt    <= 0;
+                        l1_wait_final   <= 1'b0;
+                        l1_flush_cnt    <= 0;
+        
+                        $display("\n============================================================");
+                        $display("[TB_DEBUG] Start L1 stream debug (grp0). Printing k=1..%0d", dut.cur_input_len);
+                        $display("============================================================");
+                    end
+        
+                    if (prev_state == CALC_L1 && dut.state != CALC_L1) begin
+                        if (l1_debug_active) begin
+                            $display("============================================================");
+                            $display("[TB_DEBUG] End L1 MAC debug. Printed %0d lines", l1_debug_cnt);
+                            $display("============================================================\n");
+                        end
+                        l1_debug_active <= 1'b0;
+                    end
+        
+                    if (l1_debug_active && dut.state == CALC_L1 && dut.group_cnt == 0 &&
+                        dut.k_cnt >= 1 && dut.k_cnt <= dut.cur_input_len) begin
+        
+                        l1_debug_cnt <= l1_debug_cnt + 1;
+        
+                        $display("[L1_MAC] t=%0t k=%0d/%0d | in0=%0d w0=%0d | mul00=%0d acc00=%0d",
+                            $time, dut.k_cnt, dut.cur_input_len,
+                            $signed(dut.sys_row_in[`dataWidth-1:0]),
+                            $signed(dut.sys_col_in[`dataWidth-1:0]),
+                            $signed(dut.debug_mul_00),
+                            $signed(dut.pe_res_unpacked[0][0])
+                        );
+        
+                        if (dut.k_cnt == dut.cur_input_len && !l1_wait_final) begin
+                            l1_wait_final <= 1'b1;
+                            l1_flush_cnt  <= 0;
+                        end
+                    end
+        
+                    if (l1_wait_final) begin
+                        l1_flush_cnt <= l1_flush_cnt + 1;
+        
+                        if (l1_flush_cnt == (FLUSH_CYC-1)) begin
+                            $display("[L1_ACC_AFTER_LAT1] t=%0t | k_end=%0d +1 | acc00=%0d",
+                                $time, dut.cur_input_len,
+                                $signed(dut.pe_res_unpacked[0][0])
+                            );
+                        end
+        
+                        if (l1_flush_cnt == FLUSH_CYC) begin
+                            $display("[L1_AU_AFTER_LAT2 ] t=%0t | k_end=%0d +2 | psum_sel=%0d bias_sel=%0d | sum=%0d sat=%0d | act=%0d | acc00=%0d | sel(img=%0d neu=%0d)",
+                                $time, dut.cur_input_len,
+                                $signed(dut.au_in_psum),
+                                $signed(dut.au_in_bias),
+                                $signed(dut.au.bias_add_res),
+                                $signed(dut.au.sum_saturated),
+                                $signed(dut.act_out_val),
+                                $signed(dut.pe_res_unpacked[0][0]),
+                                dut.in_img_idx, dut.in_neu_idx
+                            );
+                            l1_wait_final <= 1'b0;
+                        end
+                    end
+                    // ============================================================
+                    // L2 (CALC_L2 = 3) : 유효 MAC raw k=2..cur_input_len+1, 표시 k_eff=raw-1
+                    // ============================================================
+                    if (prev_state != CALC_L2 && dut.state == CALC_L2 && dut.group_cnt == 0) begin
+                        l2_debug_active <= 1'b1;
+                        l2_debug_cnt    <= 0;
+                        l2_wait_final   <= 1'b0;
+                        l2_flush_cnt    <= 0;
+        
+                        $display("\n============================================================");
+                        $display("[TB_DEBUG] Start L2 stream debug (grp0). Printing k=1..%0d", dut.cur_input_len);
+                        $display("============================================================");
+                    end
+        
+                    if (prev_state == CALC_L2 && dut.state != CALC_L2) begin
+                        if (l2_debug_active) begin
+                            $display("============================================================");
+                            $display("[TB_DEBUG] End L2 MAC debug. Printed %0d lines", l2_debug_cnt);
+                            $display("============================================================\n");
+                        end
+                        l2_debug_active <= 1'b0;
+                    end
+        
+                    if (l2_debug_active && dut.state == CALC_L2 && dut.group_cnt == 0 &&
+                        dut.k_cnt >= 2 && dut.k_cnt <= (dut.cur_input_len + 1)) begin
+        
+                        l2_debug_cnt <= l2_debug_cnt + 1;
+        
+                        $display("[L2_MAC] t=%0t k=%0d/%0d (raw=%0d) | in0=%0d w0=%0d | mul00=%0d acc00=%0d",
+                            $time,
+                            (dut.k_cnt-1), dut.cur_input_len, dut.k_cnt,
+                            $signed(dut.sys_row_in[`dataWidth-1:0]),
+                            $signed(dut.sys_col_in[`dataWidth-1:0]),
+                            $signed(dut.debug_mul_00),
+                            $signed(dut.pe_res_unpacked[0][0])
+                        );
+        
+                        if (dut.k_cnt == (dut.cur_input_len + 1) && !l2_wait_final) begin
+                            l2_wait_final <= 1'b1;
+                            l2_flush_cnt  <= 0;
+                        end
+                    end
+        
+                    if (l2_wait_final) begin
+                        l2_flush_cnt <= l2_flush_cnt + 1;
+        
+                        if (l2_flush_cnt == (FLUSH_CYC-1)) begin
+                            $display("[L2_ACC_AFTER_LAT1] t=%0t | k_end=%0d (raw_end=%0d) +1 | acc00=%0d",
+                                $time,
+                                dut.cur_input_len,
+                                (dut.cur_input_len + 1),
+                                $signed(dut.pe_res_unpacked[0][0])
+                            );
+                        end
+        
+                        if (l2_flush_cnt == FLUSH_CYC) begin
+                            $display("[L2_AU_AFTER_LAT2 ] t=%0t | k_end=%0d (raw_end=%0d) +2 | psum_sel=%0d bias_sel=%0d | sum=%0d sat=%0d | act=%0d | acc00=%0d | sel(img=%0d neu=%0d)",
+                                $time,
+                                dut.cur_input_len,
+                                (dut.cur_input_len + 1),
+                                $signed(dut.au_in_psum),
+                                $signed(dut.au_in_bias),
+                                $signed(dut.au.bias_add_res),
+                                $signed(dut.au.sum_saturated),
+                                $signed(dut.act_out_val),
+                                $signed(dut.pe_res_unpacked[0][0]),
+                                dut.in_img_idx, dut.in_neu_idx
+                            );
+                            l2_wait_final <= 1'b0;
+                        end
+                    end
+        
+        
+                    // ============================================================
+                    // L3 (CALC_L3 = 5) : 유효 MAC raw k=2..cur_input_len+1, 표시 k_eff=raw-1
+                    // ============================================================
+                    if (prev_state != CALC_L3 && dut.state == CALC_L3 && dut.group_cnt == 0) begin
+                        l3_debug_active <= 1'b1;
+                        l3_debug_cnt    <= 0;
+                        l3_wait_final   <= 1'b0;
+                        l3_flush_cnt    <= 0;
+        
+                        $display("\n============================================================");
+                        $display("[TB_DEBUG] Start L3 stream debug (grp0). Printing k=1..%0d", dut.cur_input_len);
+                        $display("============================================================");
+                    end
+        
+                    if (prev_state == CALC_L3 && dut.state != CALC_L3) begin
+                        if (l3_debug_active) begin
+                            $display("============================================================");
+                            $display("[TB_DEBUG] End L3 MAC debug. Printed %0d lines", l3_debug_cnt);
+                            $display("============================================================\n");
+                        end
+                        l3_debug_active <= 1'b0;
+                    end
+        
+                    if (l3_debug_active && dut.state == CALC_L3 && dut.group_cnt == 0 &&
+                        dut.k_cnt >= 2 && dut.k_cnt <= (dut.cur_input_len + 1)) begin
+        
+                        l3_debug_cnt <= l3_debug_cnt + 1;
+        
+                        $display("[L3_MAC] t=%0t k=%0d/%0d (raw=%0d) | in0=%0d w0=%0d | mul00=%0d acc00=%0d",
+                
 해당 Logic에서는 Layer 1 / 2 / 3에서 MAC 연산 결과, accumulator 누적값, bias add 및 saturation을 거친 
 
 activation 출력까지의 각 단계 결과를 순차적으로 모니터링합니다.
