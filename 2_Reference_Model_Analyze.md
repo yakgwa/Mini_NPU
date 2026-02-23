@@ -269,7 +269,7 @@ H/W Architecture
         
             - 상태를 SEND로 전환
     
-        -SEND
+        - SEND
 
             - holdData_X의 LSB(dataWidth)를 out_data_X로 출력
             
