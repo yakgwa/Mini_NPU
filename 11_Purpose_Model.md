@@ -175,7 +175,7 @@ Global_Buffer 동작 특성
 - 각 layer의 intermediate result를 저장하는 buffer입니다.
 - Write는 sequential 방식으로 수행됩니다.
 - Read는 combinational path로 구성되어 address 입력에 대해 즉시 data가 출력됩니다.
-- 
+  
 요약하면, 연산 단계(CALC_Lx)와 저장 단계(BUFFER_WR_Lx)를 분리하고, activation latency를 address 제어 로직에서 보정하여 write alignment를 보장하는 구조입니다.
 
 ​각 layer의 output은 Global_Buffer에 저장된 후 다음 layer의 input으로 재사용되며, layer 간 데이터 경계는 memory를 기준으로 분리됩니다. 
@@ -505,104 +505,90 @@ input과 weight가 입력된 이후 multiplication이 수행되고, 1-cycle 뒤�
 
 ​기존 코드에서는 bias 값에 대해 sign extension을 적용하여 bit width를 확장하였으나, 이 방식은 bias의 Q-format을 유지하지 못한다는 문제가 있습니다.
 
-    ex) {dataWidth{sel_b[3][dataWidth-1]}} = {8{1'b1}} = 8'b1111_1111인 경우, sign extension을 적용하면 최종적으로 16'b1111_1111_1111_1010으로 확장됩니다. 이는 sign bit를 단순 복제하여 정수값 −6을 16-bit signed 정수로 표현한 결과로, bias가 가지는 fractional bit 정보를 전혀 반영하지 않습니다. (fraction bit란 2진수 소수점 이하 자릿수를 의미합니다.) 반면, MAC의 psum은 이미 Q-format(예: Q(16,8))으로 누적된 값이므로, 두 값을 직접 더할 경우 binary point 위치가 서로 달라져 실제 의도한 bias magnitude와 다른 값이 더해지게 됩니다.
-    이러한 문제를 해결하기 위해 sign extension 대신 left shift를 적용하여 bias에 fractional bit를 추가하도록 수정하였으며, 이를 통해 bias를 MAC의 psum Q-format(Q(16,8))과 정렬시켜 올바른 bias add가 수행되도록 하였습니다.
+    ex) {dataWidth{sel_b[3][dataWidth-1]}} = {8{1'b1}} = 8'b1111_1111인 경우, sign extension을 적용하면 최종적으로 16'b1111_1111_1111_1010으로 확장됩니다. 
 
-ex) $signed(sel_b[3]) <<< 8을 적용할 경우, sel_b[3] = 8'b1111_1010이 signed 값 −6으로 해석된 뒤 8-bit left shift가 적용되어, 
-결과적으로 −6 << 8 = −1536, 즉 16'b1111_1010_0000_0000으로 변환됩니다.
-    always @(*) begin
-        // default (latch 방지)
-        sel_b[0] = '0;
-        sel_b[1] = '0;
-        sel_b[2] = '0;
-        sel_b[3] = '0;
+이는 sign bit를 단순 복제하여 정수값 −6을 16-bit signed 정수로 표현한 결과로, bias가 가지는 fractional bit 정보를 전혀 반영하지 않습니다. (fraction bit란 2진수 소수점 이하 자릿수를 의미합니다.) 반면, MAC의 psum은 이미 Q-format(예: Q(16,8))으로 누적된 값이므로, 두 값을 직접 더할 경우 binary point 위치가 서로 달라져 실제 의도한 bias magnitude와 다른 값이 더해지게 됩니다.
+이러한 문제를 해결하기 위해 sign extension 대신 left shift를 적용하여 bias에 fractional bit를 추가하도록 수정하였으며, 이를 통해 bias를 MAC의 psum Q-format(Q(16,8))과 정렬시켜 올바른 bias add가 수행되도록 하였습니다.
 
-        case (layer_idx)
-            1: begin
-                for (k = 0; k < 4; k = k + 1) begin
-                    if (((neuron_group << 2) + k) < `numNeuronLayer1)           // 4의 배수개 + index k가 layer neuron 개수를 넘지 않을 경우,        
-                        sel_b[k] = w_b_l1[(neuron_group << 2) + k];             // sell_b에 해당 bias 할당
-                end                                                             // 넘어갈 경우, sel_b는 이미 '0'으로 초기화 되었으므로 0 유지
+    ex) $signed(sel_b[3]) <<< 8을 적용할 경우, sel_b[3] = 8'b1111_1010이 signed 값 −6으로 해석된 뒤 8-bit left shift가 적용되어, 결과적으로 −6 << 8 = −1536, 즉 16'b1111_1010_0000_0000으로 변환됩니다.
+
+            always @(*) begin
+                // default (latch 방지)
+                sel_b[0] = '0;
+                sel_b[1] = '0;
+                sel_b[2] = '0;
+                sel_b[3] = '0;
+        
+                case (layer_idx)
+                    1: begin
+                        for (k = 0; k < 4; k = k + 1) begin
+                            if (((neuron_group << 2) + k) < `numNeuronLayer1)           // 4의 배수개 + index k가 layer neuron 개수를 넘지 않을 경우,        
+                                sel_b[k] = w_b_l1[(neuron_group << 2) + k];             // sell_b에 해당 bias 할당
+                        end                                                             // 넘어갈 경우, sel_b는 이미 '0'으로 초기화 되었으므로 0 유지
+                    end
+                    2: begin
+                        for (k = 0; k < 4; k = k + 1) begin
+                            if (((neuron_group << 2) + k) < `numNeuronLayer2)
+                                sel_b[k] = w_b_l2[(neuron_group << 2) + k];
+                        end
+                    end
+                    3: begin
+                        for (k = 0; k < 4; k = k + 1) begin
+                            if (((neuron_group << 2) + k) < `numNeuronLayer3)
+                                sel_b[k] = w_b_l3[(neuron_group << 2) + k];
+                        end
+                    end
+                    default: begin
+                        // keep sel_b = 0
+                    end
+                endcase
             end
-            2: begin
-                for (k = 0; k < 4; k = k + 1) begin
-                    if (((neuron_group << 2) + k) < `numNeuronLayer2)
-                        sel_b[k] = w_b_l2[(neuron_group << 2) + k];
-                end
+        
+            // bias signing extension 및 packing
+            // weight와 다르게 bias에서는 dataWidth 확장이 필요하므로, sign extension을 적용하여 packing
+            // Original Code : Q(8,0) -> Q(16,0)  (sign-extension only)
+            // * Q(total ,fractional bit)로 표기함.
+        
+            // Modified Code : Q(8,0) -> Q(16,8)
+            //  - bias를 dataWidth만큼 left shift하여 fractional bit를 추가, fractional bit란 2진 소수점 이하 자릿수를 의미.
+            //  - MAC psum(Q(16,8))과 Q-format을 맞추기 위함
+            //  - Golden 모델의 bias 처리({bias, 8'b0})와 bit-level로 동일
+        
+            reg signed [2*dataWidth-1:0] bias_scaled [0:3];
+        
+            always_comb begin
+            for (int i=0; i<4; i++) begin
+                bias_scaled[i] = $signed(sel_b[i]) <<< dataWidth;  // (= {sel_b[i], {dataWidth{1'b0}}})
             end
-            3: begin
-                for (k = 0; k < 4; k = k + 1) begin
-                    if (((neuron_group << 2) + k) < `numNeuronLayer3)
-                        sel_b[k] = w_b_l3[(neuron_group << 2) + k];
-                end
             end
-            default: begin
-                // keep sel_b = 0
+        
+            always_ff @(posedge clk) begin
+            b_out_packed <= { bias_scaled[3], bias_scaled[2], bias_scaled[1], bias_scaled[0] };
             end
-        endcase
-    end
-
-    // bias signing extension 및 packing
-    // weight와 다르게 bias에서는 dataWidth 확장이 필요하므로, sign extension을 적용하여 packing
-    // Original Code : Q(8,0) -> Q(16,0)  (sign-extension only)
-    // * Q(total ,fractional bit)로 표기함.
-
-    // Modified Code : Q(8,0) -> Q(16,8)
-    //  - bias를 dataWidth만큼 left shift하여 fractional bit를 추가, fractional bit란 2진 소수점 이하 자릿수를 의미.
-    //  - MAC psum(Q(16,8))과 Q-format을 맞추기 위함
-    //  - Golden 모델의 bias 처리({bias, 8'b0})와 bit-level로 동일
-
-    reg signed [2*dataWidth-1:0] bias_scaled [0:3];
-
-    always_comb begin
-    for (int i=0; i<4; i++) begin
-        bias_scaled[i] = $signed(sel_b[i]) <<< dataWidth;  // (= {sel_b[i], {dataWidth{1'b0}}})
-    end
-    end
-
-    always_ff @(posedge clk) begin
-    b_out_packed <= { bias_scaled[3], bias_scaled[2], bias_scaled[1], bias_scaled[0] };
-    end
 ​
-
-Proposed Model - 4th Simulation
+### Proposed Model - 4th Simulation
 
 3차 시뮬레이션 이후, Bias_Bank를 수정한 결과는 다음과 같습니다.
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_90.png" width="400"/>
+
+<div align="left">
 
 Layer 1의 연산 결과는 Golden value와 동일함을 확인했으나. 여전히 Layer 2와 Layer 3에서는 X가 출력됨을 확인하였습니다.
 
 ==========================================================================================
 
-번외로, 앞서 TB에서 설명한 것과 같이 k_cnt 기준으로 debug monitor를 구성하다 보니, 
+번외로, 앞서 TB에서 설명한 것과 같이 k_cnt 기준으로 debug monitor를 구성하다 보니, 최종 output 일부가 누락되는 문제가 발생하였습니다.
 
-최종 output 일부가 누락되는 문제가 발생하였습니다.
+​아래 waveform을 보면 state가 CALC에서 다음 state로 전이되는 시점에 debug_active가 함께 deassert되며, pipeline latency에 의해 아직 출력되지 않은 값(약 2-cycle 분)이 capture되지 못하고 누락됨을 확인할 수 있습니다.
 
-​
+​이를 해결하기 위해 debug point의 기준을 단순히 k_cnt 구간에 고정하지 않고, latency를 고려한 “유효 연산 구간”과 “flush 구간”을 함께 포함하도록 수정하였습니다.
 
-아래 waveform을 보면 state가 CALC에서 다음 state로 전이되는 시점에 debug_active가 함께 deassert되며, 
-
-pipeline latency에 의해 아직 출력되지 않은 값(약 2-cycle 분)이 capture되지 못하고 누락됨을 확인할 수 있습니다.
-
-​
-
-이를 해결하기 위해 debug point의 기준을 단순히 k_cnt 구간에 고정하지 않고, 
-
-latency를 고려한 “유효 연산 구간”과 “flush 구간”을 함께 포함하도록 수정하였습니다.
-
-​
-
-구체적으로 state 전이 직후에도 pipeline에 남아 있는 결과를 확인할 수 있도록, 
-
-마지막 MAC 이후 FLUSH_CYC만큼 추가로 snapshot을 출력하여 
-
-acc(LAT1) 및 Activation_Unit output(LAT2)까지 확인 가능하도록 보강하였습니다.
+​구체적으로 state 전이 직후에도 pipeline에 남아 있는 결과를 확인할 수 있도록, 마지막 MAC 이후 FLUSH_CYC만큼 추가로 snapshot을 출력하여 acc(LAT1) 및 Activation_Unit output(LAT2)까지 확인 가능하도록 보강하였습니다.
 
 (** 최종 TB 코드 참고)
 
-​
-
-(** 해당 TB 설계 시에는 simulation 결과를 기반으로 2-cycle flush를 임의로 적용하였으며, 
+​(** 해당 TB 설계 시에는 simulation 결과를 기반으로 2-cycle flush를 임의로 적용하였으며, 
 
 추후 이론적인 latency 분석을 통해 이에 대한 검증이 필요합니다.)
 
