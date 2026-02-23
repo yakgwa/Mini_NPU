@@ -1,6 +1,6 @@
 ## Systolic Array - Dataflow 개념 정리 & Array 확장
 
-기존 Systolic Array의 이론적 연산
+### 기존 Systolic Array의 이론적 연산
 
 다음은 Output Stationary 방식을 기준으로 직접 연산 과정을 정리한 그림입니다.
 
@@ -18,70 +18,39 @@
 
 <div align="left">
 
-Previous imageNext image
-Output Stationary (OS) 구조의 핵심
+### Output Stationary (OS) 구조의 핵심
 
 이 구조의 가장 큰 특징은 이름 그대로 "최종 결과값(Output)이 생성되는 위치가 고정된다"라는 점입니다.
 
-​
+​- 고정된 데이터 (Stationary):
+ - Partial Sum (C): PE 내부 레지스터에 고정되어, 연산이 완료될 때까지 계속 누적됩니다.
 
-고정된 데이터 (Stationary):
+- 이동하는 데이터 (Moving):
+ - Input (A): 좌측 → 우측으로 이동
+ - Weight (B): 상단 → 하단으로 이동
 
-Partial Sum (C): PE 내부 레지스터에 고정되어, 연산이 완료될 때까지 계속 누적됩니다.
+- 동기화 (Synchronization) 
 
-이동하는 데이터 (Moving):
+    정확한 연산 타이밍을 맞추기 위해 입력 데이터($A, B$)는 대각선 형태의 Wavefront을 그리며 진입합니다. 이를 위해 각 행/열마다 Shift Delay를 주어 데이터가 순차적으로 PE에 도달하도록 제어합니다.
 
-Input (A): 좌측 → 우측으로 이동
-
-Weight (B): 상단 → 하단으로 이동
-
-​
-
-💡 동기화 (Synchronization) 
-
-정확한 연산 타이밍을 맞추기 위해 입력 데이터($A, B$)는 대각선 형태의 Wavefront을 그리며 진입합니다. 
-
-이를 위해 각 행/열마다 Shift Delay를 주어 데이터가 순차적으로 PE에 도달하도록 제어합니다.
-
-​
-
-Weight Stationary (WS) 구조의 핵심
+### Weight Stationary (WS) 구조의 핵심
 
 반면, Google TPU 등이 채택한 WS 방식은 "가중치(Weight)를 PE 안에 고정한다"라는 점에서 OS 방식과 정반대의 흐름을 가집니다.
 
-​
+​- 고정된 데이터 (Stationary):
+ - Weight (B): 연산 시작 전, 각 PE 레지스터에 미리 로드(Pre-load) 되어 고정되고, 연산이 끝날 때까지 밖으로 이동하지 않습니다.
 
-고정된 데이터 (Stationary):
+- 이동하는 데이터 (Moving):
+ - Input (A): 좌측 → 우측으로 이동하며 각 PE의 Weight와 연산됩니다.
+ - Partial Sum (C): PE에 머무르지 않고 상단 → 하단으로 흐르며 값이 누적됩니다. (OS와의 가장 큰 차이점)
 
-Weight (B): 연산 시작 전, 각 PE 레지스터에 미리 로드(Pre-load) 되어 고정되고, 연산이 끝날 때까지 밖으로 이동하지 않습니다.
-
-이동하는 데이터 (Moving):
-
-Input (A): 좌측 → 우측으로 이동하며 각 PE의 Weight와 연산됩니다.
-
-Partial Sum (C): PE에 머무르지 않고 상단 → 하단으로 흐르며 값이 누적됩니다. (OS와의 가장 큰 차이점)
-
-​
-
-이를 시각적으로 나타내면 다음과 같습니다. 
-
-C = A × W 연산 시, Input과 Weight가 만나 생성되는 결과 행렬 C의 구조입니다.
+이를 시각적으로 나타내면 다음과 같습니다. C = A × W 연산 시, Input과 Weight가 만나 생성되는 결과 행렬 C의 구조입니다.
 
  
+### OS
 
 
-AI 활용
-
-
-
-AI 활용
-
-​
-
-OS
-
-
-WS
+### WS
 
 
 실제 연산 값 적용 및 확장_(1): 1×4 Weight-Stationary Systolic Array
