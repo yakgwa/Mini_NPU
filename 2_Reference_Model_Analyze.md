@@ -165,7 +165,7 @@ expected = in_mem[784];
 
 입력 전송이 완료되면 Testbench는 다음 신호를 기다립니다.
 
-@(posedge intr);
+|@(posedge intr);|
 
 → intr는 DUT의 inference 완료 신호입니다. 따라서 동작 흐름은 다음과 같습니다.
 
