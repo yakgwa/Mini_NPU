@@ -60,116 +60,55 @@
 
 ### WS
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_51.png" width="400"/>
 
-실제 연산 값 적용 및 확장_(1): 1×4 Weight-Stationary Systolic Array
+<div align="left">
+
+###실제 연산 값 적용 및 확장_(1): 1×4 Weight-Stationary Systolic Array
 
 Reference Model의 입력은 784개의 픽셀 데이터(숫자 이미지 1장)로 이루어진 벡터입니다.
 
-​
+​이 데이터를 처리하는 기존 Reference Model의 FC Layer 구조를 살펴보면, Layer 1은 30개, Layer 2는 20개의 출력 뉴런을 가집니다. 
 
-이 데이터를 처리하는 기존 Reference Model의 FC Layer 구조를 살펴보면, Layer 1은 30개, Layer 2는 20개의 출력 뉴런을 가집니다. 
+이 중 Layer 1의 연산을 행렬식으로 표현하면 아래와 같습니다. 이제 실제 Systolic Array 구조로 구현해 보겠습니다.
 
-이 중 Layer 1의 연산을 행렬식으로 표현하면 아래와 같습니다.
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_52.png" width="400"/>
 
+<div align="left">​
 
-이제 실제 Systolic Array 구조로 구현해 보겠습니다.
+1 × 4 또는 4 × 4 Systolic Array를 그대로 적용할 경우, Array 크기 제약으로 인해 모든 데이터를 한 번에 처리하기는 어렵습니다. 따라서 입력 데이터와 Weight를 tile 단위로 분해​하여, 이를 순차적으로 계산하는 방식으로 접근합니다.
 
-​
+​먼저, 1 × 4 Systolic Array 구조를 기준으로 tile 1이 적용된 경우를 살펴보겠습니다. 해당 구조에서의 데이터 배치와 연산 흐름은 아래 그림과 같습니다.
 
-1 × 4 또는 4 × 4 Systolic Array를 그대로 적용할 경우, Array 크기 제약으로 인해 모든 데이터를 한 번에 처리하기는 어렵습니다.
-
-따라서 입력 데이터와 Weight를 tile 단위로 분해​하여, 이를 순차적으로 계산하는 방식으로 접근합니다.
-
-​
-
-먼저, 1 × 4 Systolic Array 구조를 기준으로 tile 1이 적용된 경우를 살펴보겠습니다.
-
-해당 구조에서의 데이터 배치와 연산 흐름은 아래 그림과 같습니다.
-
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_53.png" width="400"/>
 
 1 x 4 Systolic Array 예상 구현
 
-​
+<div align="left">​
 
-위 그림에서 각 PE에는 tile 1에 해당하는 weight의 일부 구간만이 고정되어 저장됩니다.
+위 그림에서 각 PE에는 tile 1에 해당하는 weight의 일부 구간만이 고정되어 저장됩니다. 구체적으로, Tile 1에서는 각 PE가 서로 다른 weight index w_{*,0}, w_{*,1}, w_{*,2}, w_{*,3} 중 하나의 column을 담당하며,
 
-​
+해당 column에 속한 784개의 weight 값이 시간축에 따라 순차적으로 적용됩니다. 즉, PE 내부에서는 tile 단위로 선택된 weight column이 고정되고 cycle마다 입력 a_i가 전달됨에 따라 동일한 PE에서 w_{i, j} × a_i 연산이 반복 수행됩니다.
 
-구체적으로, Tile 1에서는 각 PE가 서로 다른 weight index w_{*,0}, w_{*,1}, w_{*,2}, w_{*,3} 중 하나의 column을 담당하며,
+​이때 “weight가 고정된다”는 것은 tile 1이 처리되는 동안 PE가 담당하는 weight column이 변하지 않는다는 의미이며, 각 cycle마다 서로 다른 weight 값이 사용되더라도, 그 값들은 모두 동일한 weight column에 속한 값들입니다.
 
-해당 column에 속한 784개의 weight 값이 시간축에 따라 순차적으로 적용됩니다.
-
-​
-
-즉, PE 내부에서는
-
-tile 단위로 선택된 weight column이 고정되고
-
-cycle마다 입력 a_i가 전달됨에 따라
-
-동일한 PE에서 w_{i, j} × a_i 연산이 반복 수행됩니다.
-
-​
-
-이때 “weight가 고정된다”는 것은 tile 1이 처리되는 동안 PE가 담당하는 weight column이 변하지 않는다는 의미이며,
-
-각 cycle마다 서로 다른 weight 값이 사용되더라도, 그 값들은 모두 동일한 weight column에 속한 값들입니다.
-
-​
-
-** 1×4 Array에서 확인해야 할 사항
+<mark>** 1×4 Array에서 확인해야 할 사항</mark>
 
 Q1. Input과 Weight의 구성
+    Batch Size를 1로 가정하면, 입력 데이터는 1 × 784 크기의 입력 벡터 1개로 구성되며, 입력 요소 a_0, a_1, ~ a_783은 매 cycle마다 serial 하게 입력됩니다. Weight Matrix은 784 × 30이며 (Output Feature = 30, Input Dimension = 784), 1 × 4 Array 구조에서는 한 번에 4개의 Output Feature만 처리할 수 있습니다.
 
-Batch Size를 1로 가정하면, 입력 데이터는 1 × 784 크기의 입력 벡터 1개로 구성되며,
+​따라서 전체 30개의 Output Feature를 계산하기 위해 Weight Matrix를 Column 단위로 분할하여 총 8회의 Tile 연산을 순차적으로 수행합니다.
 
-입력 요소 a_0, a_1, ~ a_783은 매 cycle마다 serial 하게 입력됩니다.
+​Q2. 1 × 4 Array 구조는 WS 인가, OS 인가?
+    Input과 Weight가 매 cycle마다 PE에 공급되는 형태만 보면 Output Stationary(OS) 구조로 오해하기 쉽습니다. 그러나 아키텍처 관점에서는 Weight Stationary(WS)로 분류하는 것이 타당합니다.
 
-​
-
-Weight Matrix은 784 × 30이며 (Output Feature = 30, Input Dimension = 784),
-
-1 × 4 Array 구조에서는 한 번에 4개의 Output Feature만 처리할 수 있습니다.
+그 이유는 다음과 같습니다. 각 PE는 Weight Matrix의 특정 column을 전담하며 해당 Weight는 PE 간에 전달되거나 이동하지 않습니다. Input 데이터만이 Systolic 하게 PE를 따라 흐르며 연산을 수행합니다.
 
 ​
+Batch Size = 1 환경에서는 cycle마다 다른 weight 값이 사용되기 때문에 Weight가 이동하는 것처럼 보일 수 있습니다. 그러나 이는 Weight가 흐르는 것이 아니라, 동일한 PE 위치에서 연산 순서에 따라 값이 갱신되는 것입니다. 즉, Weight의 공간적 위치가 고정되어 있다는 점에서 본 구조의 본질은 WS에 해당합니다.
 
-따라서 전체 30개의 Output Feature를 계산하기 위해 Weight Matrix를 Column 단위로 분할하여
-
-총 8회의 Tile 연산을 순차적으로 수행합니다.
-
-​
-
-Q2. 1 × 4 Array 구조는 WS 인가, OS 인가?
-
-Input과 Weight가 매 cycle마다 PE에 공급되는 형태만 보면 Output Stationary(OS) 구조로 오해하기 쉽습니다.
-
-그러나 아키텍처 관점에서는 Weight Stationary(WS)로 분류하는 것이 타당합니다.
-
-​
-
-그 이유는 다음과 같습니다.
-
-​
-
-각 PE는 Weight Matrix의 특정 column을 전담하며 해당 Weight는 PE 간에 전달되거나 이동하지 않습니다.
-
-Input 데이터만이 Systolic 하게 PE를 따라 흐르며 연산을 수행합니다.
-
-​
-
-Batch Size = 1 환경에서는 cycle마다 다른 weight 값이 사용되기 때문에 Weight가 이동하는 것처럼 보일 수 있습니다.
-
-그러나 이는 Weight가 흐르는 것이 아니라, 동일한 PE 위치에서 연산 순서에 따라 값이 갱신되는 것입니다.
-
-​
-
-즉, Weight의 공간적 위치가 고정되어 있다는 점에서 본 구조의 본질은 WS에 해당합니다.
-
-​
-
-Q3. Tile 교체 시점과 Pipeline을 활용한 효율 극대화
-
-마지막 입력 a_783이 주입된 이후에도, Systolic Array의 전파 특성으로 인해 PE 위치에 따라 연산 종료 시점에는 차이가 발생합니다.
+​Q3. Tile 교체 시점과 Pipeline을 활용한 효율 극대화
+    마지막 입력 a_783이 주입된 이후에도, Systolic Array의 전파 특성으로 인해 PE 위치에 따라 연산 종료 시점에는 차이가 발생합니다.
 
 ​
 
