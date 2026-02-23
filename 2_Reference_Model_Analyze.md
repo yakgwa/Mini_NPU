@@ -283,43 +283,39 @@ H/W Architecture
 
 ​
 
- Layer 2 연산
++ Layer 2 연산
 
-Layer_2는 Layer 1 serialize된 출력(out_data_1, data_out_valid_1)을 입력으로 받아 연산.
-
-연산결과는 vector(x2_out)로 출력되며, o2_valid로 유효 시점을 표시.
-
-이후 동일한 FSM 구조를 통해 vector → scalar로 변환되어 Layer 3로 전달.
-
-​
-
-Layer 3 연산 (최종 FC Layer)
-
-Layer_3는 Layer 2 serialize된 출력(out_data_2, data_out_valid_2)을 입력으로 받아 연산.
-
-결과는 최종 score vector(x3_out)로 출력되며, o3_valid가 유효 시점을 나타냄.
+    + Layer_2는 Layer 1 serialize된 출력(out_data_1, data_out_valid_1)을 입력으로 받아 연산.
+    
+    - 연산결과는 vector(x2_out)로 출력되며, o2_valid로 유효 시점을 표시.
+    
+    - 이후 동일한 FSM 구조를 통해 vector → scalar로 변환되어 Layer 3로 전달.
 
 ​
 
-최종 결과 선택: maxFinder
++ Layer 3 연산 (최종 FC Layer)
 
-maxFinder는 최종 layer 출력 vector(x3_out)를 입력으로 사용.
-
-vector 내 값 중 최댓값을 갖는 index를 선택하여 분류 결과(out) 생성.
-
-out_valid는 최종 분류 결과의 유효 시점을 나타내며, 동시에 intr 신호로 외부에 전달.
+    + Layer_3는 Layer 2 serialize된 출력(out_data_2, data_out_valid_2)을 입력으로 받아 연산.
+    
+    - 결과는 최종 score vector(x3_out)로 출력되며, o3_valid가 유효 시점을 나타냄.
 
 ​
 
-​
++ 최종 결과 선택: maxFinder
 
-한 줄 요약
+    + maxFinder는 최종 layer 출력 vector(x3_out)를 입력으로 사용.
+    
+    - vector 내 값 중 최댓값을 갖는 index를 선택하여 분류 결과(out) 생성.
+    
+    - out_valid는 최종 분류 결과의 유효 시점을 나타내며, 동시에 intr 신호로 외부에 전달.
 
-zyNet은 입력 stream을 받아 FC Layer 연산을 통해 vector를 생성하고, FSM 기반 Serialization을 거쳐 다음 Layer로 전달하는 구조.
++ 한 줄 요약
 
-최종 Layer의 score vector에 대해 maxFinder가 class index를 선택하여 결과를 출력.
-
-상위에서는 include.v를 include하여 Neuron Network 전반에서 공통 parameter를 사용.​
+    + zyNet은 입력 stream을 받아 FC Layer 연산을 통해 vector를 생성하고, FSM 기반 Serialization을 거쳐 다음 Layer로 전달하는 구조.
+    
+    - 최종 Layer의 score vector에 대해 maxFinder가 class index를 선택하여 결과를 출력.
+    
+    - 상위에서는 include.v를 include하여 Neuron Network 전반에서 공통 parameter를 사용.​
 
 Reference Model Sub (neuron.v) 분석
 
