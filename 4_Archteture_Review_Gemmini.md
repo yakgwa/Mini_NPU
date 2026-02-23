@@ -144,266 +144,159 @@ Gemmini는 systolic array의 input과 output을 private SRAMs에 저장하며, �
 
 모듈로 구현됩니다.
 
-​
-
 각 scratchpad/accumulator SRAM의 row는 DIM elements로 구성되며, DIM은 systolic array 가로 방향의 PE 개수를 의미합니다. 
 
-​
+​각 element는 Gemmini가 처리하는 하나의 scalar value입니다.
 
-각 element는 Gemmini가 처리하는 하나의 scalar value입니다.
-
-scratchpad element type: inputType (default: 8-bit integer)
-
-accumulator element type: accType (default: 32-bit integer)
-
-​
+- scratchpad element type: inputType (default: 8-bit integer)
+- accumulator element type: accType (default: 32-bit integer)
 
 예를 들어 default configuration(16×16 systolic array)에서는
 
-scratchpad row width = 16 × bits(inputType) = 128 bits
+- scratchpad row width = 16 × bits(inputType) = 128 bits
 
-accumulator row width = 16 × bits(accType) = 512 bits
+- accumulator row width = 16 × bits(accType) = 512 bits
 
 입니다.
 
-​
-
 Accumulator는 scratchpad보다 복잡한 구조를 가지며,
 
-in-place accumulation을 위한 adder
-
-scaler
-
-activation function unit
+- in-place accumulation을 위한 adder
+- scaler
+- activation function unit
 
 을 포함합니다.
 
-​
+Scaling 및 activation은 accType 값을 inputType으로 변환하여 읽어낼 때 적용되며, 이는 한 layer의 partial sum을 다음 layer의 low-bitwidth input으로 변환하기 위해 사용됩니다.
 
-Scaling 및 activation은 accType 값을 inputType으로 변환하여 읽어낼 때 적용되며, 
-
-이는 한 layer의 partial sum을 다음 layer의 low-bitwidth input으로 변환하기 위해 사용됩니다.
-
-​
-
-Systolic Array and Transposer
+### Systolic Array and Transposer
 
 ExecuteController 내부의 MeshWithDelays 모듈은
 
-systolic array (Mesh)
-
-transposer
+- systolic array (Mesh)
+- transposer
 
 input alignment를 위한 delay registers 를 포함합니다.
 
-​
+MeshWithDelays는 매 cycle마다 A, B, D matrix의 row를 입력받아, C = A × B + D 를 row 단위로 출력합니다.
 
-MeshWithDelays는 매 cycle마다 A, B, D matrix의 row를 입력받아,
+​- Weight-stationary mode:
 
-C = A × B + D 를 row 단위로 출력합니다.
+    B는 preload되고, A와 D가 streaming됩니다.
 
-​
+- Output-stationary mode:
 
-Weight-stationary mode:
+    D가 preload되고, A와 B가 streaming됩니다.
 
-B는 preload되고, A와 D가 streaming됩니다.
+​A, B, D는 모두 inputType이며, C는 outputType입니다. C를 scratchpad에 저장하면 inputType으로 cast되고, accumulator에 저장하면 accType으로 cast됩니다.
 
-Output-stationary mode:
+​Weight-stationary mode에서는 inputType D가 partial sum을 표현하기에 bitwidth가 부족하므로, 일반적으로 D는 zero-matrix를 사용하고 partial sum은 accumulator SRAM에서 누적됩니다. Input(A, B, D)은 정확한 cycle에 정확한 PE에 도달하도록 shift-register delay를 거쳐 전달됩니다.
 
-D가 preload되고, A와 B가 streaming됩니다.
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_42.png" width="400"/>
 
-​
+<div align="left">
 
-A, B, D는 모두 inputType이며, C는 outputType입니다.
-
-C를 scratchpad에 저장하면 inputType으로 cast되고, accumulator에 저장하면 accType으로 cast됩니다.
-
-​
-
-Weight-stationary mode에서는 inputType D가 partial sum을 표현하기에 bitwidth가 부족하므로, 
-
-일반적으로 D는 zero-matrix를 사용하고 partial sum은 accumulator SRAM에서 누적됩니다.
-
-​
-
-Input(A, B, D)은 정확한 cycle에 정확한 PE에 도달하도록 shift-register delay를 거쳐 전달됩니다.
-
-
-Systolic array 자체는 Mesh.scala에 구현되어 있으며,
-
-Tile + PE로 구성된 two-tier hierarchy 구조입니다.
-
-Tile 간에는 pipeline register가 존재하고,
+Systolic array 자체는 Mesh.scala에 구현되어 있으며, Tile + PE로 구성된 two-tier hierarchy 구조입니다. Tile 간에는 pipeline register가 존재하고,
 
 각 Tile 내부는 combinational PEs로 구성됩니다.
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_43.png" width="400"/>
 
-Transposer는 간단한 systolic 구조로 구현되며, 
+<div align="left">
 
-output-stationary mode에서는 programmer가 transpose를 명시하지 않더라도 항상 사용됩니다. 
+Transposer는 간단한 systolic 구조로 구현되며, output-stationary mode에서는 programmer가 transpose를 명시하지 않더라도 항상 사용됩니다. 
 
-​
+​이는 scratchpad row layout과 systolic array input 요구사항 간의 mismatch를 해결하기 위함입니다.
 
-이는 scratchpad row layout과 systolic array input 요구사항 간의 mismatch를 해결하기 위함입니다.
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_44.png" width="400"/>
 
+<div align="left">
 
-​
-
-DMA
+### DMA
 
 Gemmini는 두 개의 DMA를 포함합니다.
 
-main memory → private SRAM
+- main memory → private SRAM
 
-private SRAM → main memory
+- private SRAM → main memory
 
-​
+DMA는 virtual address를 사용하며, TLB를 통해 physical address로 변환됩니다. TLB miss 시에는 host CPU와 공유하는 PTW를 사용합니다.
 
-DMA는 virtual address를 사용하며, 
+​DMA는 large memory request를 여러 개의 TileLink transaction으로 분할하며, request size는 power-of-2 alignment를 만족해야 합니다.
 
-TLB를 통해 physical address로 변환됩니다. TLB miss 시에는 host CPU와 공유하는 PTW를 사용합니다.
+​성능 관점에서 Gemmini는 요청 개수를 최소화하는 방향으로 DMA를 설계합니다. DMAWriter는 memory write 과정에서 max-pooling을 수행하기 위한 comparator를 포함합니다.
 
-​
+### ROB (Reorder Buffer)
 
-DMA는 large memory request를 여러 개의 TileLink transaction으로 분할하며, 
+Decoupled architecture로 인해 Load/Store/ExecuteController는 서로 out-of-order로 동작할 수 있습니다. Gemmini는 ROB를 통해 controller 간 instruction hazard를 감지합니다.
 
-request size는 power-of-2 alignment를 만족해야 합니다.
+Instruction은 dependency가 해소된 이후에만 각 controller로 issue됩니다. 단, 같은 controller 내부의 instruction은 program-order로 issue되며, 해당 controller가 내부 hazard를 책임집니다.
 
-​
+### Matmul / Conv Loop Unrollers
 
-성능 관점에서 Gemmini는 요청 개수를 최소화하는 방향으로 DMA를 설계합니다.
+Gemmini의 systolic array는 최대 DIM × DIM 크기의 matmul만 직접 처리할 수 있습니다. 더 큰 matmul 또는 convolution은 tiling이 필요합니다.
 
-​
+이를 programmer가 직접 처리하는 부담을 줄이기 위해, Gemmini는 CISC-style high-level ISA instruction을 제공하며, 이를 통해 matmul/conv를 자동으로 tile 및 unroll합니다.
 
-DMAWriter는 memory write 과정에서 max-pooling을 수행하기 위한 comparator를 포함합니다.
+​이 기능은 LoopMatmul, LoopConv 모듈로 구현됩니다.해당 모듈은 FSM 기반으로 동작하며,
 
-​
-
-ROB (Reorder Buffer)
-
-Decoupled architecture로 인해 Load/Store/ExecuteController는 서로 out-of-order로 동작할 수 있습니다.
-
-​
-
-Gemmini는 ROB를 통해 controller 간 instruction hazard를 감지합니다.
-
-Instruction은 dependency가 해소된 이후에만 각 controller로 issue됩니다.
-
-​
-
-단, 같은 controller 내부의 instruction은 program-order로 issue되며, 해당 controller가 내부 hazard를 책임집니다.
-
-​
-
-Matmul / Conv Loop Unrollers
-
-Gemmini의 systolic array는 최대 DIM × DIM 크기의 matmul만 직접 처리할 수 있습니다.
-
-​
-
-더 큰 matmul 또는 convolution은 tiling이 필요합니다.
-
-이를 programmer가 직접 처리하는 부담을 줄이기 위해, Gemmini는 CISC-style high-level ISA instruction을 제공하며, 
-
-이를 통해 matmul/conv를 자동으로 tile 및 unroll합니다.
-
-​
-
-이 기능은 LoopMatmul, LoopConv 모듈로 구현됩니다.
-
-해당 모듈은 FSM 기반으로 동작하며,
-
-double-buffering
-
-ROB 상태 모니터링
+- double-buffering
+- ROB 상태 모니터링
 
 을 통해 memory access와 compute 간 overlap을 극대화합니다.
 
-Memory Addressing Scheme
+## Memory Addressing Scheme
 
-Gemmini의 private memory는 row-addressed 방식으로 구성됩니다.
+Gemmini의 private memory는 row-addressed 방식으로 구성됩니다. 각 row는 DIM elements로 이루어지며, DIM은 systolic array 가로 방향의 PE 개수를 의미합니다(기본 설정에서는 16).
 
-​
-
-각 row는 DIM elements로 이루어지며, DIM은 systolic array 가로 방향의 PE 개수를 의미합니다(기본 설정에서는 16).
-
-Scratchpad의 element type은 inputType입니다.
-
-Accumulator의 element type은 accType입니다.
-
-​
+- Scratchpad의 element type은 inputType입니다.
+- Accumulator의 element type은 accType입니다.
 
 모든 Gemmini private memory address는 32-bit이며, 상위 bit에는 다음과 같은 의미가 부여됩니다.
 
-Bit 31 (MSB)
+- Bit 31 (MSB)
+  - 0: scratchpad addressing
+  - 1: accumulator addressing
 
-0: scratchpad addressing
+- Bit 30: accumulator write 시에만 의미를 가집니다.
+  - 0: overwrite
+  - 1: accumulate (기존 값에 누적)
 
-1: accumulator addressing
+- Bit 29: accumulator read 시에만 의미를 가집니다.
+  - 0: inputType으로 scaled-down 된 값 read
+  - 1: accType 값 그대로 read
 
-​
+​Bit 29가 1인 경우에는 activation function 및 scaling이 적용되지 않습니다.
 
-Bit 30: accumulator write 시에만 의미를 가집니다.
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_45.png" width="400"/>
 
-0: overwrite
+<div align="left">
 
-1: accumulate (기존 값에 누적)
+Gemmini는 main memory 접근 시 software-visible virtual address를 사용하며, physical address translation은 Gemmini 내부에서 TLB를 통해 programmer에게 투명하게 처리됩니다.
 
-​
-
-Bit 29: accumulator read 시에만 의미를 가집니다.
-
-0: inputType으로 scaled-down 된 값 read
-
-1: accType 값 그대로 read
-
-​
-
-Bit 29가 1인 경우에는 activation function 및 scaling이 적용되지 않습니다.
-
-
-Gemmini는 main memory 접근 시 software-visible virtual address를 사용하며, 
-
-physical address translation은 Gemmini 내부에서 TLB를 통해 programmer에게 투명하게 처리됩니다.
-
-Core Matmul Sequences
+## Core Matmul Sequences
 
 Gemmini에서 하나의 matrix multiplication은 두 단계로 수행됩니다.
 
-matmul.preload
-
-matmul.compute
-
-​
+1. matmul.preload
+2. matmul.compute
 
 이는 systolic array에 유지되어야 하는 데이터(B 또는 D)를 명확히 구분하기 위한 구조입니다.
 
-Output-stationary(OS)
+- Output-stationary(OS)
+- D matrix를 preload
+- partial sum은 systolic array 내부에 유지
 
-D matrix를 preload
+​- Weight-stationary(WS)
+- B matrix를 preload
+- partial sum은 accumulator SRAM에 저장
 
-partial sum은 systolic array 내부에 유지
+이 preload/compute 분리는 ISA 길이 제한 때문이기도 하지만, 본질적으로는 systolic array state 유지를 위한 hardware 모델을 반영한 것입니다.
 
-​
+​또한, compute 단계에서는
 
-Weight-stationary(WS)
+- previously preloaded data를 재사용하거나
 
-B matrix를 preload
-
-partial sum은 accumulator SRAM에 저장
-
-​
-
-이 preload/compute 분리는 ISA 길이 제한 때문이기도 하지만, 
-
-본질적으로는 systolic array state 유지를 위한 hardware 모델을 반영한 것입니다.
-
-​
-
-또한, compute 단계에서는
-
-previously preloaded data를 재사용하거나
-
-이전 결과 위에 누적(accumulated compute)
+- 이전 결과 위에 누적(accumulated compute)
 
 하는 방식이 지원됩니다.
