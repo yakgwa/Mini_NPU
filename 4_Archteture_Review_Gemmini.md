@@ -1,6 +1,8 @@
+## Archteture Review
+
 Neural Network의 연산 흐름을 이해하기 위해, DNN accelerator 연구용 오픈소스 프로젝트인 Gemmini를 살펴봅니다.
 
-<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_39.jpg" width="400"/>
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_39.png" width="400"/>
 
 Gemmini​
 
