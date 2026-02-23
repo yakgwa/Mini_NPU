@@ -25,6 +25,40 @@
 ​- CNN (Convolutional Neural Network) : 
   convolution operation을 중심으로 구성된 Neural Network architecture입니다. 개념적으로는 convolution 연산을 사용하지만, 실제 실행 단계에서는 image-to-column 등의 변환을 통해 MatMul 형태로 변환되어 계산됩니다.
 
+
+ 
+Level of Abstraction
+
+개념
+
+역할 / 의미
+
+Model / Algorithm Level
+
+DNN / MLP / CNN / RNN
+
+Neural Network의 구조와 구성 방식을 정의하는 architecture 개념
+
+Mathematical / Operation Level
+
+MatMul
+
+Neural Network 내부 계산을 표현하는 가장 기본적인 수학적 연산
+
+Algorithm / Interface Level
+
+GEMM
+
+MatMul을 실제 hardware에서 실행하기 위해 정형화한 
+
+execution-level computation interface
+
+Hardware Architecture Level
+
+Systolic Array
+
+GEMM을 고효율로 수행하기 위한 hardware architecture 
+
 - RNN (Recurrent Neural Network) : 
   sequence data 처리를 위해 recurrent connection을 가지는 Neural Network architecture입니다. 시간 축 방향으로 state가 반복적으로 전달되며, 내부 계산은 time-step 단위의 반복적인 MatMul과 accumulation으로 구성됩니다. 이 레벨에서는 사용되는 computation의 종류보다는, Neural Network의 구조와 구성 방식에 초점을 둡니다. 
 
@@ -53,3 +87,10 @@ Systolic Array는 다수의 Processing Element (PE)를 2D array 형태로 배치
 ​또한 pipeline 기반으로 연산을 수행함으로써 매 cycle마다 연산 결과를 지속적으로 출력할 수 있으며, 이를 통해 전체 throughput을 향상시킵니다.
 
 ​결과적으로 Systolic Array는 GEMM을 고효율로 실행하기 위한 대표적인 hardware architecture입니다.
+
+|Level of Abstraction|개념|역할 / 의미|
+|------|---|---|
+|Model / Algorithm Level||DNN / MLP / CNN / RNN||Neural Network의 구조와 구성 방식을 정의하는 architecture 개념|
+|Mathematical / Operation Level||MatMul||Neural Network 내부 계산을 표현하는 가장 기본적인 수학적 연산|
+|Algorithm / Interface Level||GEMM||MatMul을 실제 hardware에서 실행하기 위해 정형화한 execution-level computation interface|
+|Hardware Architecture Level|Systolic Array||GEMM을 고효율로 수행하기 위한 hardware architecture|
