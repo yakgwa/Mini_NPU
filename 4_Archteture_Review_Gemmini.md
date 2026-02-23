@@ -8,7 +8,7 @@ Gemmini​
 
 <div align="left">
 
-### Gemmini
+## Gemmini
 
 Gemmini는 DNN accelerator를 독립적인 연산 블록으로 보지 않고, system과 software stack의 일부로 다룹니다. 
 
@@ -20,7 +20,7 @@ Gemmini는 DNN accelerator를 독립적인 연산 블록으로 보지 않고, sy
 
 <div align="left">
 
-### Architecture
+## Architecture
 
 Gemmini는 RoCC (Rocket Custom Coprocessor) accelerator로 구현되며, CPU가 실행하는 RISC-V custom instruction을 통해 직접 제어됩니다.
 
@@ -91,107 +91,56 @@ Gemmini 내부를 흐르는 data-type을 결정합니다. 예를 들어 inputTyp
 - Float(8, 24) : single-precision IEEE floating-point
   - Floating-point datatype을 사용하는 경우, pe_latency parameter​를 함께 조정해야 할 수 있습니다. 이는 PE 내부에 삽입되는 shift register의 개수를 지정하며, multiply-accumulate 연산이 single cycle 내에 완료되지 않는 경우 필요합니다.
 
-### Access-execute queue parameters 
+### Access-execute queue parameters (ld_queue_length, st_queue_length, ex_queue_length, rob_entries)
 
-(ld_queue_length, st_queue_length, ex_queue_length, rob_entries)
-
-Gemmini는 access-execute decoupling을 위해 load, store, execute instruction queue를 각각 분리하여 구현합니다. 
-
-​
-
-각 queue의 크기는 access와 execute 간 decoupling 수준을 결정합니다.
+Gemmini는 access-execute decoupling을 위해 load, store, execute instruction queue를 각각 분리하여 구현합니다. 각 queue의 크기는 access와 execute 간 decoupling 수준을 결정합니다.
 
 또한 reorder buffer(ROB) 를 포함하며, ROB entry 수는 dependency management에 영향을 미칩니다.
 
-​
+### DMA parameters (dma_maxbytes, dma_buswidth, mem_pipeline)
 
-DMA parameters (dma_maxbytes, dma_buswidth, mem_pipeline)
+Gemmini는 DMA engine을 통해 main memory와 scratchpad, accumulator 간의 data transfer를 수행합니다. DMA transaction 크기는 해당 parameters로 결정됩니다.
 
-Gemmini는 DMA engine을 통해 main memory와 scratchpad, accumulator 간의 data transfer를 수행합니다. 
-
-​
-
-DMA transaction 크기는 해당 parameters로 결정됩니다.
-
-이 parameters는 Rocket Chip SoC system parameters와 밀접하게 연관되며, 
-
-예를 들어 dma_buswidth는 SystemBusKey beatBytes, dma_maxbytes는 cacheblockbytes parameter와 연결됩니다.
-
-​
+이 parameters는 Rocket Chip SoC system parameters와 밀접하게 연관되며, 예를 들어 dma_buswidth는 SystemBusKey beatBytes, dma_maxbytes는 cacheblockbytes parameter와 연결됩니다.
 
 Gemmini는 elaboration-time에 선택적으로 포함할 수 있는 optional features도 제공합니다.
 
-​
+### Scaling during “move-in” operations (mvin_scale_args, mvin_scale_acc_args)​
 
-Scaling during “move-in” operations (mvin_scale_args, mvin_scale_acc_args)​
-
-DRAM 또는 main memory에서 scratchpad로 데이터를 이동시키는 mvin 과정에서, 데이터에 scaling factor를 적용할 수 있습니다. 
-
-​
-
-해당 parameters는 scaling factor의 datatype과 scaling 방식를 정의합니다.
+DRAM 또는 main memory에서 scratchpad로 데이터를 이동시키는 mvin 과정에서, 데이터에 scaling factor를 적용할 수 있습니다. 해당 parameters는 scaling factor의 datatype과 scaling 방식를 정의합니다.
 
 이 parameters가 None으로 설정되면, 해당 기능은 elaboration-time에 비활성화됩니다.
 
-​
+Scratchpad input과 accumulator input에 동일한 scaling을 적용하는 경우, mvin_scale_shared를 true로 설정하여 multiplier와 functional unit을 공유할 수 있습니다.
 
-Scratchpad input과 accumulator input에 동일한 scaling을 적용하는 경우, 
+## Major Components​
 
-mvin_scale_shared를 true로 설정하여 multiplier와 functional unit을 공유할 수 있습니다.
+### Decoupled Access / Execute Architecture
 
-Major Components​
-
-Decoupled Access / Execute Architecture
-
-Gemmini는 decoupled access/execute architecture를 채택하고 있으며, 
-
-이는 memory-access와 execute instruction이 hardware 내 서로 다른 영역에서 concurrently 수행됨을 의미합니다.
-
-​
+Gemmini는 decoupled access/execute architecture를 채택하고 있으며, 이는 memory-access와 execute instruction이 hardware 내 서로 다른 영역에서 concurrently 수행됨을 의미합니다.
 
 이를 위해 Gemmini는 hardware를 크게 세 개의 controller로 분리합니다.
 
-ExecuteController
+- ExecuteController
+    Matrix multiplication과 같은 execute-type ISA command를 수행합니다. 내부에는 systolic array와 transposer가 포함됩니다.
 
-Matrix multiplication과 같은 execute-type ISA command를 수행합니다. 
+- LoadController
+    Main memory에서 Gemmini의 private scratchpad 또는 accumulator로 데이터를 이동하는 모든 load instruction을 담당합니다.
 
-내부에는 systolic array와 transposer가 포함됩니다.
+- StoreController
+    Gemmini의 private SRAM에서 main memory로 데이터를 이동하는 store instruction을 담당합니다. 또한 Gemmini는 pooling을 memory write 과정에서 수행하므로, max-pooling instruction 역시 이 controller에서 처리됩니다.
 
-​
+    세 controller는 programmer로부터 직접 전달된 ISA command를 decode하고 실행하며, scratchpad 및 accumulator SRAM을 공유합니다.
 
-LoadController
-
-Main memory에서 Gemmini의 private scratchpad 또는 accumulator로 데이터를 이동하는 모든 load instruction을 담당합니다.
-
-​
-
-StoreController
-
-Gemmini의 private SRAM에서 main memory로 데이터를 이동하는 store instruction을 담당합니다. 
-
-또한 Gemmini는 pooling을 memory write 과정에서 수행하므로, max-pooling instruction 역시 이 controller에서 처리됩니다.
-
-​
-
-세 controller는 programmer로부터 직접 전달된 ISA command를 decode하고 실행하며, scratchpad 및 accumulator SRAM을 공유합니다.
-
-​
-
-Scratchpad and Accumulator
+### Scratchpad and Accumulator
 
 Gemmini는 systolic array의 input과 output을 private SRAMs에 저장하며, 이를 각각 scratchpad와 accumulator라고 부릅니다.
 
-​
+​일반적으로 input은 scratchpad에 저장되고, partial sum 및 final result는 accumulator에 저장됩니다. Scratchpad와 accumulator는 모두 Scratchpad.scala에서 instantiate되며,
 
-일반적으로 input은 scratchpad에 저장되고, partial sum 및 final result는 accumulator에 저장됩니다.
+- scratchpad bank는 ScratchpadBank
 
-​
-
-Scratchpad와 accumulator는 모두 Scratchpad.scala에서 instantiate되며,
-
-scratchpad bank는 ScratchpadBank
-
-accumulator bank는 AccumulatorMem
+- accumulator bank는 AccumulatorMem
 
 모듈로 구현됩니다.
 
