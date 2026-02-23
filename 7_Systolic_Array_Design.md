@@ -247,11 +247,31 @@
 
 <div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_66.png" width="200"/>
 
+unsigned 연산 결과
+
 <div align="left">
 
 특히 곱셈 및 누산 연산에서는 signed 해석 여부가 결과에 직접적인 영향을 미치며, unsigned 설정 시 sign bit가 magnitude의 일부로 취급되어 잘못된 연산 결과를 유발할 수 있습니다.
 
 ​따라서 입력 operand(a, b)와 곱셈 결과, accumulator는 모두 signed로 선언하여 음수 값에 대한 연산이 올바르게 수행되도록 합니다. 이를 통해 2’s complement 표현을 기반으로 한 곱셈 및 누산 동작을 정확하게 모델링할 수 있습니다.
+
+## 2. 1-D Array
+
+### DUT
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
