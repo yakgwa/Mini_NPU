@@ -109,7 +109,7 @@ Inference: Training을 통해 이미 학습된 weight를 그대로 사용하여,
 
 - RNN / LSTM (Recurrent Neural Network): 이전에 처리한 정보를 기억하면서, 시간 순서대로 데이터를 하나씩 처리하는 구조
 
-<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_4.jpg" width="400"/>
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_4.png" width="400"/>
 
 ​
 
@@ -117,17 +117,11 @@ Inference: Training을 통해 이미 학습된 weight를 그대로 사용하여,
 
 ### 1.2 추론 workload의 현실적인 제약
 
-논문에서 사용하는 여섯 개의 benchmark application은 앞서 정리한 세 가지 신경망 유형
-
-(MLP, CNN, LSTM)을 대표하며, Google 데이터센터 추론(inference) 워크로드의 약 95%를 차지합니다.
-
-​
+논문에서 사용하는 여섯 개의 benchmark application은 앞서 정리한 세 가지 신경망 유형(MLP, CNN, LSTM)을 대표하며, Google 데이터센터 추론(inference) 워크로드의 약 95%를 차지합니다.
 
 이러한 inference application들은 대부분 검색, 번역, 추천과 같은 user-facing service의 일부로 동작하며,
 
 그 결과 추론 환경에서는 처리량(throughput)보다 응답 시간(response time)이 훨씬 더 중요한 성능 지표로 작용합니다.
-
-​
 
 또한 각 모델은 수백만에서 수천만 개에 이르는 weight를 포함하고 있어,
 
