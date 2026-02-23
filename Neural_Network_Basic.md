@@ -1,38 +1,15 @@
-### Preliminarie
+## Preliminarie
 
 본격적인 Reference Model 분석에 앞서, 이후 내용을 이해하는 데 필요한 기본 개념들을 간단히 정리합니다.
 
-​
+​Neural Network를 공부하다 보면 DNN, CNN, RNN, MLP와 같은 model architecture 수준의 개념부터, MatMul, GEMM, Systolic Array와 같은 computation 및 hardware 관점의 개념까지, 서로 다른 성격과 level of abstraction을 가진 용어들이 동시에 등장합니다.
 
-Neural Network를 공부하다 보면 DNN, CNN, RNN, MLP와 같은 model architecture 수준의 개념부터,
-
-MatMul, GEMM, Systolic Array와 같은 computation 및 hardware 관점의 개념까지,
-
-서로 다른 성격과 level of abstraction을 가진 용어들이 동시에 등장합니다.
-
-​
-
-이들 모두가 Neural Network와 관련된 개념이다 보니,
-
-어떤 용어가 computation을 의미하는지,
-
-어떤 용어가 model architecture를 의미하는지,
-
-어떤 용어가 hardware implementation과 직접적으로 연결되는지
-
-처음 접하는 입장에서는 이를 구분하기가 쉽지 않습니다.
-
-​
+​이들 모두가 Neural Network와 관련된 개념이다 보니, 어떤 용어가 computation을 의미하는지, 어떤 용어가 model architecture를 의미하는지, 어떤 용어가 hardware implementation과 직접적으로 연결되는지 처음 접하는 입장에서는 이를 구분하기가 쉽지 않습니다.
 
 이에 따라 본격적인 분석에 앞서, 관련 개념들을 role과 level of abstraction 관점에서 정리했습니다.
 
 
-
-AI 활용
-
-Model / Algorithm Level (Neural Network architecture)
-
-가장 상위 레벨에서는 Neural Network가 어떤 구조로 구성되어 있는지를 정의합니다.
+### Model / Algorithm Level (Neural Network architecture) : 가장 상위 레벨에서는 Neural Network가 어떤 구조로 구성되어 있는지를 정의합니다.
 
 ​
 
