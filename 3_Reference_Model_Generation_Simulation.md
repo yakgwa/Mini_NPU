@@ -17,8 +17,8 @@ genTestData.py는 test data를 생성하는 스크립트이며, 해당 파일을
 
 실제 ModelSim이 실행되는 디렉터리로 출력 경로를 직접 지정하였습니다.
 
-  outputPath = "C:/NPU_study/ref/"
-  headerFilePath = "C:/NPU_study/ref/"
+      outputPath = "C:/NPU_study/ref/"
+      headerFilePath = "C:/NPU_study/ref/"
   
 이를 통해 genTestData.py 실행 시 생성되는 모든 test data 파일이 ModelSim 시뮬레이션 디렉터리 내에 직접 생성되며, RTL testbench에서 별도의 경로 수정 없이 해당 파일을 바로 참조할 수 있습니다.
 
@@ -37,7 +37,7 @@ Windows CMD 또는 PowerShell을 실행합니다.
   
 3. 스크립트 실행
 
-  python genTestData.py
+      python genTestData.py
   
 ※ numpy Error 발생 시
 
@@ -45,10 +45,10 @@ Windows CMD 또는 PowerShell을 실행합니다.
 
 genTestData.py는 Reference Model 기반의 연산 및 test data 생성을 위해 NumPy를 사용하므로, 사전에 해당 라이브러리가 설치되어 있어야 합니다.
 
-  Traceback (most recent call last):
-    File "C:\NPU_study\CNN-Handwritten-Digit-MNIST-main\Network\Vivado\Python\genTestData.py", line 11, in <module>
-      import numpy as np
-  ModuleNotFoundError: No module named 'numpy'
+      Traceback (most recent call last):
+        File "C:\NPU_study\CNN-Handwritten-Digit-MNIST-main\Network\Vivado\Python\genTestData.py", line 11, in <module>
+          import numpy as np
+      ModuleNotFoundError: No module named 'numpy'
   
 ### 해결 방법
 
