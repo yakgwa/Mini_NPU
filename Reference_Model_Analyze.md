@@ -30,141 +30,98 @@ MNIST 손글씨 Dataset​
 
 Reference Model의 Testbench인 top_sim.v를 분석해보겠습니다.
 
-​###1. Interface 구조
+​### 1. Interface 구조
 
 TB를 확인하면, DUT는 두 가지 인터페이스를 기준으로 설계되어 있습니다.
 
-AXI-Lite → Weight, Bias, Control register, Result register 접근
-
-AXI-Stream → Input feature (MNIST 784 pixel) 전달
-
-​
-
+- AXI-Lite → Weight, Bias, Control register, Result register 접근
+- AXI-Stream → Input feature (MNIST 784 pixel) 전달
+  
 역할을 구분하면 다음과 같습니다.
 
-AXI-Lite   : Parameter / Control path
-AXI-Stream : Data path (Inference input)
-AXI-Lite는 Weight/Bias와 같은 파라미터 로딩, 제어 레지스터 설정, 결과 레지스터 read를 담당하는 
+- AXI-Lite   : Parameter / Control path
+- AXI-Stream : Data path (Inference input)
+- AXI-Lite는 Weight/Bias와 같은 파라미터 로딩, 제어 레지스터 설정, 결과 레지스터 read를 담당하는 low-bandwidth control interface입니다.
 
-low-bandwidth control interface입니다.
+반면 AXI-Stream은 784개의 MNIST pixel 값을 순차적으로 전달하는 streaming data interface입니다. 대량의 feature data를 한 방향으로 연속 전송하는 구조에 적합합니다.
 
-​
-
-반면 AXI-Stream은 784개의 MNIST pixel 값을 순차적으로 전달하는 streaming data interface입니다.
-
-대량의 feature data를 한 방향으로 연속 전송하는 구조에 적합합니다.
-
-​
-
-2. Stimulus 관점에서의 TB 구성
+### 2. Stimulus 관점에서의 TB 구성
 
 현재 Testbench에서는 AXI-Stream protocol을 검증하는 형태로 stimulus를 구성하지 않습니다.
 
-​
+외부 AXI master가 Stream을 구동하는 구조가 아니라, test_data_xxxx.txt 파일을 $readmemb로 읽어 내부 신호(in, in_valid)에 직접 주입하는 방식으로 구성되어 있습니다.
 
-외부 AXI master가 Stream을 구동하는 구조가 아니라,
+​따라서 본 분석에서는 AXI-Stream protocol 자체보다는, "파일 기반 입력 데이터가 DUT로 어떻게 주입되고, 그에 따라 inference 결과가 어떻게 검증되는지" 에 초점을 맞추어 Stimulus 흐름을 정리하겠습니다.
 
-test_data_xxxx.txt 파일을 $readmemb로 읽어 내부 신호(in, in_valid)에 직접 주입하는 방식으로 구성되어 있습니다.
-
-​
-
-따라서 본 분석에서는 AXI-Stream protocol 자체보다는,
-
-"파일 기반 입력 데이터가 DUT로 어떻게 주입되고, 그에 따라 inference 결과가 어떻게 검증되는지"
-
-에 초점을 맞추어 Stimulus 흐름을 정리하겠습니다.
-
-​
-
-3. 전체 동작 흐름 개요
+### 3. 전체 동작 흐름 개요
 
 top_sim.v는 다음과 같은 순서로 동작합니다.
 
-Reset
-→ (선택) Weight / Bias preload
-→ test_data 파일 로드
-→ 784 pixel Stream 전송
-→ intr 대기
-→ Result register read
-→ 정답 비교 및 Accuracy 누적
-→ 반복
-이제 각 단계를 자세히 살펴보겠습니다.
-
-​
-
-4. Reset Sequence
+    Reset
+    → (선택) Weight / Bias preload
+    → test_data 파일 로드
+    → 784 pixel Stream 전송
+    → intr 대기
+    → Result register read
+    → 정답 비교 및 Accuracy 누적
+    → 반복
+    이제 각 단계를 자세히 살펴보겠습니다.
+    
+### 4. Reset Sequence
 
 DUT의 reset 포트는 다음과 같이 연결되어 있습니다.
 
-.s_axi_aresetn(reset)
+    .s_axi_aresetn(reset)
+    
 aresetn이므로 active-low reset 구조입니다.
-
-​
 
 Testbench의 reset 동작은 다음과 같습니다.
 
-reset = 0 → reset asserted
+    1. reset = 0 → reset asserted
+    
+    2. 100ns 대기
+    
+    3. reset = 1 → reset deassert
+    
+    4. writeAxi(28, 0) → soft reset clear
 
-100ns 대기
+​    즉, Hardware reset → reset release → 내부 control register 초기화
 
-reset = 1 → reset deassert
-
-writeAxi(28, 0) → soft reset clear
-
-​
-
-즉,
-
-Hardware reset → reset release → 내부 control register 초기화
 이 과정을 통해 DUT는 inference를 수행할 준비 상태로 진입합니다.
 
-​
+### 5. Weight / Bias 설정 단계 (Preload)
 
-5. Weight / Bias 설정 단계 (Preload)
+pretrained가 정의되지 않은 경우에만 수행됩니다. 이 단계는 inference 이전에 parameter를 AXI-Lite로 로딩하는 과정입니다.
 
-pretrained가 정의되지 않은 경우에만 수행됩니다.
-
-이 단계는 inference 이전에 parameter를 AXI-Lite로 로딩하는 과정입니다.
-
-​
-
-5.1 Weight 설정
+### 5.1 Weight 설정
 
 각 layer와 neuron에 대해:
 
-writeAxi(12, k) → Layer 선택
+    1. writeAxi(12, k) → Layer 선택
+    
+    2. writeAxi(16, j) → Neuron 선택
+    
+    3. Weight 파일(fim.<neuron>_<layer>_w)을 $readmemb로 로드
+    
+    4. Weight를 순차적으로 writeAxi(0, data)로 write
+    
+    즉, DUT 내부 weight memory를 AXI-Lite를 통해 초기화합니다.
 
-writeAxi(16, j) → Neuron 선택
-
-Weight 파일(fim.<neuron>_<layer>_w)을 $readmemb로 로드
-
-Weight를 순차적으로 writeAxi(0, data)로 write
-
-​
-
-즉, DUT 내부 weight memory를 AXI-Lite를 통해 초기화합니다.
-
-5.2 Bias 설정
+### 5.2 Bias 설정
 
 각 neuron에 대해:
 
-Bias 파일(fim.<neuron>_<layer>_b) 로드
+    1. Bias 파일(fim.<neuron>_<layer>_b) 로드
+    
+    2. writeAxi(4, data)로 bias write
 
-writeAxi(4, data)로 bias write
+    이 과정까지 완료되면 DUT는 fully parameterized된 상태가 됩니다.
 
-​
-
-이 과정까지 완료되면 DUT는 fully parameterized된 상태가 됩니다.
-
-​
-
-6. Test Data 기반 Stimulus 생성
+### 6. Test Data 기반 Stimulus 생성
 
 이제 실제 inference 검증이 시작됩니다.
 
-​
-
-각 iteration마다 다음 파일이 생성됩니다.
+​각 iteration마다 다음 파일이 생성됩니다.
 
 test_data_0000.txt
 test_data_0001.txt
@@ -174,53 +131,43 @@ test_data_0001.txt
 index 0 ~ 783  : 784 pixel 값
 index 784      : 정답 label
 ​
-
-7. Input Feature 전송 (AXI-Stream 경로)
+### 7. Input Feature 전송 (AXI-Stream 경로)
 
 sendData() task 내부 동작을 시간 순서로 정리하면 다음과 같습니다.
 
-​
-
-7.1 파일 로드
+### 7.1 파일 로드
 
 $readmemb(fileName, in_mem);
 in_mem[0:784]에 pixel 및 label 저장
 
-7.2 Pixel Stream 전송
+### 7.2 Pixel Stream 전송
 
 for (t = 0; t < 784; t++)
     in       <= in_mem[t];
     in_valid <= 1;
-총 784 cycle 동안 연속 전송
+    
+→ 총 784 cycle 동안 연속 전송
 
-in_valid는 전송 구간 동안 계속 1
+→ in_valid는 전송 구간 동안 계속 1
 
-axis_in_data_ready는 TB에서 사용하지 않음
-
-​
+→ axis_in_data_ready는 TB에서 사용하지 않음
 
 즉, DUT가 매 cycle 입력을 수용한다고 가정한 구조입니다.
 
-​
-
-7.3 Label 저장
+### 7.3 Label 저장
 
 루프 종료 후:
-
 in_valid <= 0;
 expected = in_mem[784];
-마지막 index(784)는 DUT에 전송되지 않으며,  검증을 위한 expected label로만 사용됩니다.
+마지막 index(784)는 DUT에 전송되지 않으며, 검증을 위한 expected label로만 사용됩니다.
 
-8. Inference 완료 대기
+### 8. Inference 완료 대기
 
 입력 전송이 완료되면 Testbench는 다음 신호를 기다립니다.
 
 @(posedge intr);
-intr는 DUT의 inference 완료 신호입니다.
 
-​
-
-따라서 동작 흐름은 다음과 같습니다.
+→ intr는 DUT의 inference 완료 신호입니다. 따라서 동작 흐름은 다음과 같습니다.
 
 Pixel Stream 입력
 → 내부 MAC 연산
@@ -228,29 +175,26 @@ Pixel Stream 입력
 → intr assert
 Testbench는 interrupt 기반으로 결과 준비 완료를 판단합니다.
 
-9. Result Read 및 정확도 계산
+### 9. Result Read 및 정확도 계산
 
 intr가 발생하면 다음을 수행합니다.
 
 readAxi(8);
-AXI-Lite를 통해 Result register read
-
-결과는 axiRdData에 저장
-
-​
+→  AXI-Lite를 통해 Result register read
+→ 결과는 axiRdData에 저장
 
 이후,
 
 if (axiRdData == expected)
     right++;
-정답 여부를 비교하여 accuracy를 누적합니다.
+→ 정답 여부를 비교하여 accuracy를 누적합니다.
 
-10. 반복 수행
+### 10. 반복 수행
 
 위 과정은 다음 조건만큼 반복됩니다.
 
 MaxTestSamples = 100
-즉, 100개의 test sample에 대해:
+→ 즉, 100개의 test sample에 대해:
 
 파일 로드
 → Pixel 전송
@@ -259,23 +203,23 @@ MaxTestSamples = 100
 → 정답 비교
 를 반복하며 최종 Accuracy를 출력합니다.
 
-11. 정리
+### 11. 정리
 
 top_sim.v의 Testbench는 단순히 파일을 읽어 데이터를 넣는 구조가 아니라,
 
-AXI-Lite 기반 Parameter preload
+- AXI-Lite 기반 Parameter preload
 
-AXI-Stream 기반 Feature injection
+- AXI-Stream 기반 Feature injection
 
-Interrupt 기반 completion synchronization
+- Interrupt 기반 completion synchronization
 
-AXI-Lite 기반 result readback
+- AXI-Lite 기반 result readback
 
-Label 비교를 통한 Accuracy 계산
+- Label 비교를 통한 Accuracy 계산
 
 이라는 완전한 inference verification flow를 구성하고 있습니다.
 
-Reference Model Top (zynet.v) 분석
+##Reference Model Top (zynet.v) 분석
 
 다음으로 Reference Model의 Top module인 zynet.v를 분석해보겠습니다.​
 
