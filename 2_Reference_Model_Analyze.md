@@ -265,9 +265,9 @@ H/W Architecture
     
         + IDLE
     
-        - oX_valid[0]가 assert되면, Layer 출력 vector(xX_out)을 holdData_X에 저장
-    
-        - 상태를 SEND로 전환
+            - oX_valid[0]가 assert되면, Layer 출력 vector(xX_out)을 holdData_X에 저장
+        
+            - 상태를 SEND로 전환
     
         -SEND
 
