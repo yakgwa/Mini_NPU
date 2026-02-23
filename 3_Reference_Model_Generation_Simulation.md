@@ -60,23 +60,23 @@ Command Prompt 또는 PowerShell을 실행한 뒤, 아래 명령어를 통해 Nu
 
 4. 실행 결과 확인
 
-정상적으로 실행되면 다음 파일들이 생성됩니다. 정상적으로 실행되면 지정한 출력 디렉터리에 test data 파일이 생성됩니다.
+    정상적으로 실행되면 다음 파일들이 생성됩니다. 정상적으로 실행되면 지정한 출력 디렉터리에 test data 파일이 생성됩니다.
 
 <div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_26.png" width="100"/>
 
 <div align="left">
 
 
-​다만 스크립트를 기본 설정 그대로 실행할 경우, MNIST test set 전체(총 10,000개)를 기준으로 파일이 생성되므로 test_data_XXXX.txt가 10,000개 출력됩니다. 
+​    다만 스크립트를 기본 설정 그대로 실행할 경우, MNIST test set 전체(총 10,000개)를 기준으로 파일이 생성되므로 test_data_XXXX.txt가 10,000개 출력됩니다. 
 
-​시뮬레이션 시간을 단축하거나 특정 개수만 검증하고자 하는 경우, genAllTestData() 함수의 반복 범위를 제한하여 원하는 개수만 생성하도록 수정할 수 있습니다.
+​    시뮬레이션 시간을 단축하거나 특정 개수만 검증하고자 하는 경우, genAllTestData() 함수의 반복 범위를 제한하여 원하는 개수만 생성하도록 수정할 수 있습니다.
 
-​예를 들어 100개만 생성하고자 할 경우, 아래와 같이 for 문을 수정합니다.
+    ​예를 들어 100개만 생성하고자 할 경우, 아래와 같이 for 문을 수정합니다.
 
         # for i in range(len(test_inputs)):
         for i in range(100):
         
-위와 같이 for i in range(100)으로 변경하면, test_data_0000.txt부터 test_data_0099.txt까지 총 100개의 test data 파일만 생성되며, 필요한 검증 범위에 맞춰 원하는 개수로 조정할 수 있습니다.
+    위와 같이 for i in range(100)으로 변경하면, test_data_0000.txt부터 test_data_0099.txt까지 총 100개의 test data 파일만 생성되며, 필요한 검증 범위에 맞춰 원하는 개수로 조정할 수 있습니다.
 
 ### ModelSim Simulation
 
