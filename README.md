@@ -334,133 +334,71 @@ Systolic execution은 다수의 Processing Element(PE)를 배열 형태로 연�
 
 2×2 systolic array
 
-<div align="left">​
+<div align="left">
+ 
+- Time step 1
 
-​
-
-
-Previous imageNext image
-Time step 1
-
-첫 번째 PE로 입력된 a11과 b11이 PE 내부에서 곱셈 연산을 수행하며,
-
-그 결과인 partial sum이 PE 내부 accumulator register에 저장됩니다.
-
+첫 번째 PE로 입력된 a11과 b11이 PE 내부에서 곱셈 연산을 수행하며, 그 결과인 partial sum이 PE 내부 accumulator register에 저장됩니다.
 (그림에는 accumulator가 명시적으로 표시되지 않았으나, 연산 결과는 PE 내부에 유지됩니다.)
 
-​
+- Time step 2
 
-Time step 2
+이전 단계에서 사용된 activation과 weight는 각각 인접한 PE로 전달되어 새로운 곱셈 연산을 시작합니다. 동시에 첫 번째 PE에는 새로운 입력 a12와 b21이 도착하여, 기존 accumulator 값에 추가로 누적됩니다.
 
-이전 단계에서 사용된 activation과 weight는 각각 인접한 PE로 전달되어 새로운 곱셈 연산을 시작합니다.
+- Time step 3 ~ 4
 
-동시에 첫 번째 PE에는 새로운 입력 a12와 b21이 도착하여,
+이후 단계에서도 동일한 방식으로 activation과 weight가 systolic array 내부를 따라 이동하며, 각 PE에서는 multiply-accumulate 연산이 연속적으로 수행됩니다. 이 과정을 통해 최종적으로 각 PE의 accumulator에는 행렬 곱 결과에 해당하는 값이 저장되며, 전체 행렬 C가 완성됩니다.
 
-기존 accumulator 값에 추가로 누적됩니다.
-
-​
-
-Time step 3 ~ 4
-
-이후 단계에서도 동일한 방식으로 activation과 weight가 systolic array 내부를 따라 이동하며,
-
-각 PE에서는 multiply-accumulate 연산이 연속적으로 수행됩니다.
-
-​
-
-이 과정을 통해 최종적으로 각 PE의 accumulator에는
-
-행렬 곱 결과에 해당하는 값이 저장되며, 전체 행렬 C가 완성됩니다.
-
-​
-
-※ PE 내부 저장 vs 외부 Accumulator에 대한 설계 고민
+​※ PE 내부 저장 vs 외부 Accumulator에 대한 설계 고민
 
 위의 2×2 systolic array 예시는 partial sum을 PE 내부에 저장하는 구조를 기준으로 설명되었습니다.
 
-​
+​하지만 Google TPU와 같이 PE 외부에 별도의 accumulator block을 두는 구조를 적용하려면, partial sum을 어디에 저장하고 어떻게 전달할지에 대한 구조적·데이터 경로 설계가 필요합니다.
 
-하지만 Google TPU와 같이 PE 외부에 별도의 accumulator block을 두는 구조를 적용하려면,
+​이는 단순히 PE 구조의 차이에서 비롯되는 문제가 아니라,어떤 데이터를 PE 내부에 유지하느냐에 따라 실행 방식이 달라지는 문제입니다.
 
-partial sum을 어디에 저장하고 어떻게 전달할지에 대한 구조적·데이터 경로 설계가 필요합니다.
+​앞서 살펴본 2×2 systolic array 예시는 PE 간 데이터가 이동하며 multiply-accumulate 연산이 수행되는 기본 동작을 보여주기 위한 예시입니다.
 
-​
+이때 중요한 점은, 이러한 동작이 PE 구조 자체의 차이에서 비롯되는 것이 아니라, 어떤 데이터를 PE 내부에 유지하느냐에 따라 달라진다는 점입니다.
 
-이는 단순히 PE 구조의 차이에서 비롯되는 문제가 아니라,어떤 데이터를 PE 내부에 유지하느냐에 따라 실행 방식이 달라지는 문제입니다.
+​동일한 PE 배열을 사용하더라도, partial sum, weight, activation 중 어떤 데이터를 PE에 고정(stationary) 해 두느냐에 따라서로 다른 실행 방식이 정의될 수 있으며, 이를 dataflow라고 부릅니다.
 
-​
+​대표적으로 Output-Stationary, Weight-Stationary, Input-Stationary 방식이 존재합니다. 
 
-앞서 살펴본 2×2 systolic array 예시는
-
-PE 간 데이터가 이동하며 multiply-accumulate 연산이 수행되는 기본 동작을 보여주기 위한 예시입니다.
-
-​
-
-이때 중요한 점은, 
-
-이러한 동작이 PE 구조 자체의 차이에서 비롯되는 것이 아니라, 어떤 데이터를 PE 내부에 유지하느냐에 따라 달라진다는 점입니다.
-
-​
-
-동일한 PE 배열을 사용하더라도, partial sum, weight, activation 중 어떤 데이터를 PE에 고정(stationary) 해 두느냐에 따라
-
-서로 다른 실행 방식이 정의될 수 있으며, 이를 dataflow라고 부릅니다.
-
-​
-
-대표적으로 Output-Stationary, Weight-Stationary, Input-Stationary 방식이 존재합니다. 
-
-
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_15.png" width="400"/>
+ 
 systolic execution dataflow type
 
-Output-Stationary PE (OS)
+<div align="left">
 
-partial sum이 PE에 고정되어있으며,
+- Output-Stationary PE (OS)
 
-activation과 weight가 PE로 입력되어 이동합니다.
+ - partial sum이 PE에 고정되어있으며, activation과 weight가 PE로 입력되어 이동합니다.
 
-​
+​- Weight-Stationary PE (WS)
 
-Weight-Stationary PE (WS)
+ - weight가 PE에 고정되어있으며, activation이 입력으로 들어와 이동을 합니다. 주로 TPU에서 사용됩니다.
 
-weight가 PE에 고정되어있으며,
+- Input-Stationary PE (IS)
 
-activation이 입력으로 들어와 이동을 합니다.
+ - activation이 PE에 고정되어있으며, weight가 입력으로 들어와 이동을 합니다.
 
-주로 TPU에서 사용됩니다.
-
-​
-
-Input-Stationary PE (IS)
-
-activation이 PE에 고정되어있으며,
-
-weight가 입력으로 들어와 이동을 합니다.
-
-​
-
-TPU는 이 중에서 Weight-Stationary(WS) 성향의 구조를 채택합니다.
-
-이는 inference 단계에서 weight가 read-only이며 재사용률이 높다는 특성을 활용하기 위함입니다.
-
+​TPU는 이 중에서 Weight-Stationary(WS) 성향의 구조를 채택합니다. 이는 inference 단계에서 weight가 read-only이며 재사용률이 높다는 특성을 활용하기 위함입니다.
 → weight를 PE에 고정하고 activation만 이동시킬 경우, Unified Buffer 및 off-chip memory 접근을 효과적으로 줄일 수 있습니다.
-
-​
 
 이러한 dataflow 선택은 단일 PE의 동작 방식에만 영향을 주는 것이 아니라,
 
 연산이 tile 단위로 반복되고 array 전체로 확장될 때의 실행 패턴에도 직접적인 영향을 미칩니다.
 
-​
-
-2×2 array에서 관찰한 데이터 이동과 누적 방식은,
-
-더 큰 systolic array로 확장되면 diagonal wavefront 형태로 array 전체를 따라 전파됩니다. ** Section 2.4 그림 참조
+​2×2 array에서 관찰한 데이터 이동과 누적 방식은, 더 큰 systolic array로 확장되면 diagonal wavefront 형태로 array 전체를 따라 전파됩니다.(** Section 2.4 그림 참조)
 
 이 과정에서 각 PE는 서로 다른 시점의 연산 단계에 위치하게 되며,연산의 시작과 종료 시점이 PE마다 자연스럽게 어긋나게 됩니다.
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_14.png" width="400"/>
 
 Google TPU의 systolic execution
+
+<div align="left">
 
 이 과정에서 각 PE는 서로 다른 시점의 연산 단계에 위치하게 되며, 연산의 시작과 종료 시점이 PE마다 자연스럽게 어긋나게 됩니다. 
 
