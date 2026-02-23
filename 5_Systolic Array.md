@@ -190,8 +190,6 @@ WS 구조에서 psum은 위에서 아래로 흐릅니다. 각 PE는 자신의 �
 
 WS 방식에서는 K(Input Feature 784) 차원을 따라 Loop를 돌아야 하므로, psum의 관리가 중요합니다.
 
-​
-
 - Weight Double Buffer
 
 Batch 10개를 처리하는 동안 Weight는 고정되지만, 다음 4개 채널(k+4 ~ k+7)을 처리하려면 새로운 Weight가 필요합니다.
@@ -212,72 +210,37 @@ Array 내부에서는 4개 채널에 대한 합만 계산되므로, 전체 784�
 
 전체 연산은 다음 3중 loop로 정리됩니다. (loop 순서가 데이터 재사용을 결정합니다)
 
-​
-
 1. Outer Loop (Output Tile): 출력 Feature 30개를 4개씩 분할 (총 8회)
-
-Target Output Column j ~ j+3 설정
-
-​
-
+- Target Output Column j ~ j+3 설정
 2. Middle Loop (Input Feature Tile): 입력 Feature 784개를 4개씩 분할 (총 196회)
-
-해당하는 4 × 4 Weight Tile 로드 (Pre-load)
-
-​
-
+- 해당하는 4 × 4 Weight Tile 로드 (Pre-load)
 3. Inner Loop (Batch Stream): Sample 0 ~ 9 (총 10회)
+- 10개의 Sample을 연속으로 주입 (Streaming)
+- PE는 고정된 Weight로 10번의 연산 수행
+- 결과값(psum)은 하단으로 배출되어 외부 Buffer에 누적
 
-10개의 Sample을 연속으로 주입 (Streaming)
+### 실행 흐름 예시:
 
-PE는 고정된 Weight로 10번의 연산 수행
+1. Tile Setup: W[0..3][0..3] 로드
+2. Streaming: Sample 0~9가 차례대로 Row 0~3을 대각선으로 통과
+3.Accumulation: 하단으로 나온 결과(Sample 0~9의 부분합)를 메모리에 저장
+4. Swap: Weight W[4..7][0..3] 으로 교체 (Double Buffer)
+5. Repeat: Sample 0~9 다시 주입하여 이전 결과에 누적
 
-결과값(psum)은 하단으로 배출되어 외부 Buffer에 누적
+### 마무리
 
-​
+이번 글에서는 Systolic Array를 적용하는 과정에서 Output-Stationary(OS) 와 Weight-Stationary(WS) 를 헷갈리기 쉬운 부분을 중심으로 개념을 한 번 정리해 보았습니다.
 
-실행 흐름 예시:
+이를 바탕으로 1-D 1×4 Weight-Stationary Systolic Array의 연산 흐름을 먼저 살펴보고, 이 구조를 4×4 Systolic Array로 확장했을 때 dataflow가 어떻게 변하는지도 함께 정리했습니다.
 
-Tile Setup: W[0..3][0..3] 로드
+​다음 글에서는 Verilog(또는 SystemVerilog)를 사용해 이제 실제로 RTL 설계 단계로 넘어가 보려 합니다.
 
-Streaming: Sample 0~9가 차례대로 Row 0~3을 대각선으로 통과
+​구체적으로는 다음과 같은 내용을 순서대로 다룰 예정입니다.
 
-Accumulation: 하단으로 나온 결과(Sample 0~9의 부분합)를 메모리에 저장
-
-Swap: Weight W[4..7][0..3] 으로 교체 (Double Buffer)
-
-Repeat: Sample 0~9 다시 주입하여 이전 결과에 누적 ...
-
-마무리
-
-이번 글에서는 Systolic Array를 적용하는 과정에서
-
-Output-Stationary(OS) 와 Weight-Stationary(WS) 를 헷갈리기 쉬운 부분을 중심으로 개념을 한 번 정리해 보았습니다.
-
-​
-
-이를 바탕으로 1-D 1×4 Weight-Stationary Systolic Array의 연산 흐름을 먼저 살펴보고,
-
-이 구조를 4×4 Systolic Array로 확장했을 때 dataflow가 어떻게 변하는지도 함께 정리했습니다.
-
-​
-
-다음 글에서는 Verilog(또는 SystemVerilog)를 사용해 이제 실제로 RTL 설계 단계로 넘어가 보려 합니다.
-
-​
-
-구체적으로는 다음과 같은 내용을 순서대로 다룰 예정입니다.
-
-PE(Processing Element) 구조 설계
-
-1-D PE Chain (1×4 Array)
-
-2-D Systolic Array (4×4 Array)
-
-Controller 구조 (Systolic Data Skewing 제어)
-
-Activation Function
-
-​
+- PE(Processing Element) 구조 설계
+- 1-D PE Chain (1×4 Array)
+- 2-D Systolic Array (4×4 Array)
+- Controller 구조 (Systolic Data Skewing 제어)
+- Activation Function
 
 이 과정을 통해, 이번 글에서 정리한 dataflow와 연산 모델이 RTL 수준에서 어떤 형태로 구현되는지 차근차근 이어가 보겠습니다.
