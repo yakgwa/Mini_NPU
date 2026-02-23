@@ -365,142 +365,89 @@
         
 ### Simulation Result
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_71.png" width="400"/>
 
+<div align="left">
 
-Check Point !!
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_72.png" width="400"/>
 
-- pe_systolic_cell.sv:
+<div align="left">
 
-OS(Output-Stationary) dataflow에서 각 PE는 좌측/상단에서 입력된 a_in, b_in을 내부 register(a_reg, b_reg)에 capture한 뒤, 
+<mark>Check Point !!</mark>
 
-다음 cycle에 인접 PE(우측 a_out, 하단 b_out)로 전달합니다.
+- pe_systolic_cell.sv : OS(Output-Stationary) dataflow에서 각 PE는 좌측/상단에서 입력된 a_in, b_in을 내부 register(a_reg, b_reg)에 capture한 뒤, 다음 cycle에 인접 PE(우측 a_out, 하단 b_out)로 전달합니다. 즉, PE 간에는 1-stage pipeline register가 존재하며, 각 cycle의 입력이 en=1일 때 register에 저장되고 다음 cycle에 출력으로 전달됩니다. en=0이면 a_reg/b_reg가 유지되어 데이터 propagation이 정지(stall)합니다.
 
-​
+    ​동시에 PE 내부에서는 a_reg * b_reg 곱(mul)을 계산하고, mac_pe에서 출력 누산값(acc_sum)을 갱신합니다. 이때 clr은 누산기 상태(예: acc_sum) 초기화에만 관여하며, 데이터 전달 레지스터(a_reg/b_reg)는 초기화하지 않습니다.
 
-즉, PE 간에는 1-stage pipeline register가 존재하며, 
+​- ROWS / CONS : 2-D systolic array는 행(row)과 열(column)로 PE가 배치되므로, ROWS, COLS parameter로 array의 크기(PE 개수)를 일반화합니다. 해당 module은 ROWS × COLS 개의 pe_systolic_cell을 generate로 instance화하며, 입력 stream은 a_in_row[0:ROWS-1], b_in_col[0:COLS-1]로 정의합니다.
 
-각 cycle의 입력이 en=1일 때 register에 저장되고 다음 cycle에 출력으로 전달됩니다. 
-
-en=0이면 a_reg/b_reg가 유지되어 데이터 propagation이 정지(stall)합니다.
-
-​
-
-동시에 PE 내부에서는 a_reg * b_reg 곱(mul)을 계산하고, mac_pe에서 출력 누산값(acc_sum)을 갱신합니다. 
-
-이때 clr은 누산기 상태(예: acc_sum) 초기화에만 관여하며, 데이터 전달 레지스터(a_reg/b_reg)는 초기화하지 않습니다.
-
-​
-
-- ROWS / CONS:
-
-2-D systolic array는 행(row)과 열(column)로 PE가 배치되므로, 
-
-ROWS, COLS parameter로 array의 크기(PE 개수)를 일반화합니다.
-
-해당 module은 ROWS × COLS 개의 pe_systolic_cell을 generate로 instance화하며, 
-
-입력 stream은 a_in_row[0:ROWS-1], b_in_col[0:COLS-1]로 정의합니다.
-
-​
-
-- packed / unpacked array:
-
-SystemVerilog에서 신호의 bit-width는 packed dimension으로, 구성 개수(배열 차원) 는 unpacked dimension으로 표현합니다.
-
-​
+- packed / unpacked array : SystemVerilog에서 신호의 bit-width는 packed dimension으로, 구성 개수(배열 차원) 는 unpacked dimension으로 표현합니다.
 
 예를 들어 
 
-logic signed [DATA_W-1:0] a_in_row [0:ROWS-1];
+        logic signed [DATA_W-1:0] a_in_row [0:ROWS-1];
+
 는 각 요소가 DATA_W-bit signed인 1-D 배열(ROWS개)이며, 
 
-logic signed [ACC_W-1:0] pe_acc_sum [0:ROWS-1][0:COLS-1];
+        logic signed [ACC_W-1:0] pe_acc_sum [0:ROWS-1][0:COLS-1];
+        
 는 각 PE의 누산 결과를 저장하는 2-D 배열(ROWS×COLS개)입니다.
-
-​
 
 - * PE Interconnect 구성 방식: 내부 조건 분기 vs. 외부 Bus 확장
 
-assign a_in_cell = (c == 0) ? a_in_row[r] : a_sig[r][c-1];
-assign b_in_cell = (r == 0) ? b_in_col[c] : b_sig[r-1][c];
-기존 코드에서는 각 PE 인스턴스 내부(중첩된 generate 반복문 내부)에서 경계 조건을 직접 판단하여 입력을 선택합니다.
+        assign a_in_cell = (c == 0) ? a_in_row[r] : a_sig[r][c-1];
+        assign b_in_cell = (r == 0) ? b_in_col[c] : b_sig[r-1][c];
 
-즉, 각 PE가 자신이 배열의 경계에 위치하는지 여부(c==0, r==0) 를 판단한 뒤, 
+    기존 코드에서는 각 PE 인스턴스 내부(중첩된 generate 반복문 내부)에서 경계 조건을 직접 판단하여 입력을 선택합니다. 즉, 각 PE가 자신이 배열의 경계에 위치하는지 여부(c==0, r==0) 를 판단한 뒤, 외부 입력(a_in_row, b_in_col) 또는 인접 PE의 출력(a_sig, b_sig) 중 하나를 선택하는 구조입니다.
 
-외부 입력(a_in_row, b_in_col) 또는 인접 PE의 출력(a_sig, b_sig) 중 하나를 선택하는 구조입니다.
+​    반면, 개선된 구조에서는 inter-PE 연결용 버스를 경계까지 포함한 (N+1) 크기로 선언합니다.
 
-​
+        logic signed [DATA_W-1:0] a_conn [0:ROWS-1][0:COLS];   // COLS+1 개
+        logic signed [DATA_W-1:0] b_conn [0:ROWS][0:COLS-1];   // ROWS+1 개
+        
+        assign a_conn[r][0] = a_in_row[r];
+        assign b_conn[0][c] = b_in_col[c];
+        
+        .a_in  (a_conn[r][c]),
+        .a_out (a_conn[r][c+1]),
+        .b_in  (b_conn[r][c]),
+        .b_out (b_conn[r+1][c]),
+        
+    외부 입력은 이 확장된 버스의 첫 번째 경계(a_conn[r][0], b_conn[0][c])에 사전에 binding되며, 이후 각 PE는 항상 동일한 규칙으로 데이터를 전달합니다.
+- a_conn[r][c] → a_conn[r][c+1]
+- b_conn[r][c] → b_conn[r+1][c]
+    이 방식에서는 경계 처리가 generate 반복문 외부에서 완료되므로, 반복문 내부에서는 조건 분기 없이 동일한 인덱싱 규칙만 적용하면 됩니다.
 
-반면, 개선된 구조에서는 inter-PE 연결용 버스를 경계까지 포함한 (N+1) 크기로 선언합니다.
+​    그 결과,
+- generate 내부 코드가 단순화되고,
+- ROWS/COLS 확장 시 인덱스 관련 실수 가능성이 감소하며,
+- interconnection 구조와 PE 기능 로직이 명확히 분리되어 가독성과 유지보수성이 향상됩니다.
 
-logic signed [DATA_W-1:0] a_conn [0:ROWS-1][0:COLS];   // COLS+1 개
-logic signed [DATA_W-1:0] b_conn [0:ROWS][0:COLS-1];   // ROWS+1 개
-
-assign a_conn[r][0] = a_in_row[r];
-assign b_conn[0][c] = b_in_col[c];
-
-.a_in  (a_conn[r][c]),
-.a_out (a_conn[r][c+1]),
-.b_in  (b_conn[r][c]),
-.b_out (b_conn[r+1][c]),
-외부 입력은 이 확장된 버스의 첫 번째 경계(a_conn[r][0], b_conn[0][c])에 사전에 binding되며, 
-
-이후 각 PE는 항상 동일한 규칙으로 데이터를 전달합니다.
-
-a_conn[r][c] → a_conn[r][c+1]
-
-b_conn[r][c] → b_conn[r+1][c]
-
-이 방식에서는 경계 처리가 generate 반복문 외부에서 완료되므로, 
-
-반복문 내부에서는 조건 분기 없이 동일한 인덱싱 규칙만 적용하면 됩니다.
-
-​
-
-그 결과,
-
-generate 내부 코드가 단순화되고,
-
-ROWS/COLS 확장 시 인덱스 관련 실수 가능성이 감소하며,
-
-interconnection 구조와 PE 기능 로직이 명확히 분리되어 가독성과 유지보수성이 향상됩니다.
-
-​
-
-Error / Warning
+### Error / Warning
 
 - Error
 
-첫 번째 시도 당시, report에서 결과값이 일치하지 않아 ERROR가 발생했었습니다.
+    첫 번째 시도 당시, report에서 결과값이 일치하지 않아 ERROR가 발생했었습니다.
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_73.png" width="400"/>
 
-Error의 원인은 DUT 및 하위 모듈에서는 입력 Port를 signed로 선언하였으나, 
+<div align="left">
 
-tb_top에서 랜덤 입력을 생성할 때 다음과 같이 값을 생성하여
+    Error의 원인은 DUT 및 하위 모듈에서는 입력 Port를 signed로 선언하였으나, tb_top에서 랜덤 입력을 생성할 때 다음과 같이 값을 생성하여
 
-foreach(A[r,c]) A[r][c] = $urandom_range(0, (1 << DATA_W) - 1);
-foreach(B[r,c]) B[r][c] = $urandom_range(0, (1 << DATA_W) - 1);     
-실제 입력 값이 0 ~ 255 범위로 생성되었기 때문입니다. 
+        foreach(A[r,c]) A[r][c] = $urandom_range(0, (1 << DATA_W) - 1);
+        foreach(B[r,c]) B[r][c] = $urandom_range(0, (1 << DATA_W) - 1);     
 
-​
+    실제 입력 값이 0 ~ 255 범위로 생성되었기 때문입니다. 
 
-이 값들은 TB 내부에서는 정상적인 정수로 보이지만, 
+​    이 값들은 TB 내부에서는 정상적인 정수로 보이지만, DUT의 logic signed [DATA_W-1:0] 입력 Port로 전달되는 과정에서 bid-width에 따라 truncation이 발생하며, DATA_W=8 기준으로는 128~255 구간의 값이 음수로 해석됩니다.
 
-DUT의 logic signed [DATA_W-1:0] 입력 Port로 전달되는 과정에서 bid-width에 따라 truncation이 발생하며, 
+​이로 인해 TB에서 계산한 reference 결과와 DUT에서 실제로 연산한 값 사이에 불일치가 발생하였습니다. 이를 해결하기 위해 랜덤 입력 생성 범위를 다음과 같이 DATA_W-bit signed 표현 범위로 제한하였고,
 
-DATA_W=8 기준으로는 128~255 구간의 값이 음수로 해석됩니다.
-
-​
-
-이로 인해 TB에서 계산한 reference 결과와 DUT에서 실제로 연산한 값 사이에 불일치가 발생하였습니다.
-
-이를 해결하기 위해 랜덤 입력 생성 범위를 다음과 같이 DATA_W-bit signed 표현 범위로 제한하였고,
-
-      foreach (A[r, c]) A[r][c] = $urandom_range(-(1 << (DATA_W-1)), (1 << (DATA_W-1)) - 1);
-      foreach (B[r, c]) B[r][c] = $urandom_range(-(1 << (DATA_W-1)), (1 << (DATA_W-1)) - 1);
+        foreach (A[r, c]) A[r][c] = $urandom_range(-(1 << (DATA_W-1)), (1 << (DATA_W-1)) - 1);
+        foreach (B[r, c]) B[r][c] = $urandom_range(-(1 << (DATA_W-1)), (1 << (DATA_W-1)) - 1);
+      
 그 결과 TB에서 계산한 reference 값과 DUT 입력 값이 동일하게 유지되어 정상적으로 동작함을 확인할 수 있었습니다.
-
-​
 
 - Warning
 
