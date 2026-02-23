@@ -62,7 +62,7 @@ Command Prompt 또는 PowerShell을 실행한 뒤, 아래 명령어를 통해 Nu
 
 정상적으로 실행되면 다음 파일들이 생성됩니다. 정상적으로 실행되면 지정한 출력 디렉터리에 test data 파일이 생성됩니다.
 
-<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_26.png" width="400"/>
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_26.png" width="100"/>
 
 <div align="left">
 
