@@ -35,18 +35,11 @@ GPU는 딥러닝(Deep-Learning) 계산에 잘 맞도록 계속 발전해 왔고,
 
 https://www.opinionnews.co.kr/news/articleView.html?idxno=128677&utm_source=chatgpt.com
 
-www.opinionnews.co.kr
-
 TPU는 2016년 처음 공개된 이후, 구글 내부의 대규모 딥러닝 추론(inference) 작업을 처리하기 위해 별도로 설계된 ASIC(주문형 반도체)입니다.
 
-
-GPU와 비교했을 때 TPU는 inference workload에 최적화된 연산 구조와 메모리 구성, 연산과 메모리 간 데이터 이동을 줄여 높은 throughput을 달성, 높은 energy efficiency를 목표로 설계되었습니다.
-
-​
+GPU와 비교했을 때 TPU는 inference workload에 최적화된 연산 구조와 메모리 구성, 연산과 메모리 간 데이터 이동을 줄여 높은 throughput을 달성, 높은 energy efficiency를 목표로 설계되었습니다.​
 
 이번 글에서는 TPU 논문을 중심으로, 해당 architecture가 어떤 설계 의도를 가지고 있으며, H/W 구조가 어떻게 구성되어 있는지를 살펴보겠습니다.
-
-​
 
 ### Abstract 
 
@@ -56,7 +49,7 @@ GPU와 비교했을 때 TPU는 inference workload에 최적화된 연산 구조�
 
 ​TPU의 핵심은 65,536개의 8-bit MAC으로 구성된 Matrix Multiply Unit입니다. 이를 통해 최대 92 TOPS(Tera Operations Per Second)의 연산 성능을 제공합니다.
 
-[<img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/images_2.jpeg" />]() <br/>
+<img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/images_2.jpeg" width="400"/>
 
 Multiply와 Adder, Accumulate로 이루어진 MAC 구조
 
