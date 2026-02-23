@@ -20,30 +20,17 @@ MNIST 손글씨 Dataset​
 
 프로젝트를 분석하기 위해서는 먼저 전체 구조를 파악해야 합니다. 이를 위해 가장 효과적인 방법 중 하나는 Testbench를 우선적으로 확인하는 것입니다.
 
-​
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_22.png" width="400"/>
 
-Testbench는 RTL 코드를 Simulation 하기 위해 작성되는 Test File 입니다.
+​<div align="left">Testbench는 RTL 코드를 Simulation 하기 위해 작성되는 Test File 입니다. Testbench는 Stimulus를 통해 DUT(Design Under Test)에 입력을 인가하고, DUT의 출력은 Output Checker에서 검증하는 구조로 구성됩니다.
 
+​이 과정에서 설계자가 정의한 기능은 Time Sequence에 따라 전개됩니다. 따라서 Testbench의 Stimulus 흐름을 기준으로 RTL signal path를 따라 분석하는 것이 효과적입니다.
 
-Testbench는 Stimulus를 통해 DUT(Design Under Test)에 입력을 인가하고, 
-
-DUT의 출력은 Output Checker에서 검증하는 구조로 구성됩니다.
-
-​
-
-이 과정에서 설계자가 정의한 기능은 Time Sequence에 따라 전개됩니다.
-
-​
-
-따라서 Testbench의 Stimulus 흐름을 기준으로 RTL signal path를 따라 분석하는 것이 효과적입니다.
-
-Reference Model Testbench (top_sim.v) 분석
+## Reference Model Testbench (top_sim.v) 분석
 
 Reference Model의 Testbench인 top_sim.v를 분석해보겠습니다.
 
-​
-
-1. Interface 구조
+​###1. Interface 구조
 
 TB를 확인하면, DUT는 두 가지 인터페이스를 기준으로 설계되어 있습니다.
 
