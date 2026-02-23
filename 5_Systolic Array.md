@@ -133,6 +133,7 @@ Batch가 10인 경우, 한 번에 처리할 수 있는 row 수를 초과하므�
 ​이와 같이 4 × 4 Systolic Array에서는 row 방향으로 batch를, column 방향으로 출력 뉴런을 병렬화하고, tile과 group 단위로 연산을 반복 수행하게 됩니다.
 
 <mark>​다만 WS 방식에서는 row 방향의 의미가 앞서 언급한 batch 병렬성과는 다릅니다.​</mark> 
+
 4개의 row는 서로 다른 샘플을 처리하는 것이 아니라, 입력 벡터 내에서 서로 다른 feature(row index)를 담당합니다.
 
 즉, 4 × 4 Systolic Array는 한 번에 입력 채널 4개 (k ∼ k+3)와 출력 채널 4개 (j ∼ j+3)의 교차 영역에 대한 연산을 수행합니다.
