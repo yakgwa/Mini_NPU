@@ -30,9 +30,7 @@ Gemmini는 RoCC (Rocket Custom Coprocessor) accelerator로 구현되며, CPU가 
 
 또한 별도의 전용 메모리를 사용하지 않고, System Bus를 통해 CPU의 memory system에 접근하여 L2 cache와 연동됩니다.
 
-​즉, Gemmini는 독립적인 연산 IP가 아니라, CPU가 명령어로 제어하며 동일한 메모리 시스템을 공유하는 가속기로 설계되었습니다.
-
-Accelerator의 핵심에는 matrix multiplication을 수행하는 systolic array가 위치합니다. 
+​즉, Gemmini는 독립적인 연산 IP가 아니라, CPU가 명령어로 제어하며 동일한 메모리 시스템을 공유하는 가속기로 설계되었습니다. Accelerator의 핵심에는 matrix multiplication을 수행하는 systolic array가 위치합니다. 
 
 ​Gemmini는 기본적으로 output-stationary (OS)와 ​weight-stationary (WS) dataflow를 모두 지원하며, programmer는 이를 runtime에 선택하거나 elaboration time에 고정(hardening)하여 사용할 수 있습니다.
 
@@ -42,9 +40,7 @@ Accelerator의 핵심에는 matrix multiplication을 수행하는 systolic array
 
 * DMA (Direct Memory Access) engine은 CPU 개입 없이 메모리 간 데이터 이동을 전담하는 하드웨어 블록입니다.​
 
-Weight-stationary dataflow에서는 systolic array 외부에 accumulator가 필요하므로, adder units가 포함된 additional SRAM bank가 추가됩니다. 
-
-systolic array는 accumulator의 임의 주소로 결과를 저장하거나 새로운 input을 읽을 수 있습니다. 
+Weight-stationary dataflow에서는 systolic array 외부에 accumulator가 필요하므로, adder units가 포함된 additional SRAM bank가 추가됩니다. systolic array는 accumulator의 임의 주소로 결과를 저장하거나 새로운 input을 읽을 수 있습니다. 
 
 ​또한 해당 accumulator SRAM은 scratchpad와 유사하게 사용되며, bias 로딩 등을 위해 main memory와 DMA를 통한 직접 데이터 전송을 지원합니다.
 
@@ -66,69 +62,36 @@ Gemmini에서 중요하게 고려되는 주요 parameters는 다음과 같습니
 
 <mark>Systolic array dimensions (tileRows, tileColumns, meshRows, meshColumns)</mark>
 
-Systolic array는 2-level hierarchy로 구성됩니다. 
-
-각 tile은 fully combinational 구조이며, tile들로 구성된 mesh 사이에는 pipeline registers가 삽입됩니다. ​
+Systolic array는 2-level hierarchy로 구성됩니다. 각 tile은 fully combinational 구조이며, tile들로 구성된 mesh 사이에는 pipeline registers가 삽입됩니다. ​
 
 ​이러한 구조를 통해 tile 내부 연산과 tile 간 데이터 전달이 분리됩니다.
 
 <div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_41.png" width="400"/>
 
-Dataflow parameters (dataflow)
-
 <div align="left">
 
-Gemmini의 systolic array가 output-stationary(OS), weight-stationary(WS) 중 어떤 dataflow를 사용할지 결정합니다. 
+### Dataflow parameters (dataflow)
 
-또한 두 dataflow를 모두 지원하도록 설정할 경우, programmer가 runtime에 dataflow를 선택할 수 있습니다.
+Gemmini의 systolic array가 output-stationary(OS), weight-stationary(WS) 중 어떤 dataflow를 사용할지 결정합니다. 또한 두 dataflow를 모두 지원하도록 설정할 경우, programmer가 runtime에 dataflow를 선택할 수 있습니다.
 
-​
+### Scratchpad and accumulator memory parameters (sp_banks, sp_capacity, acc_capacity)​
 
-Scratchpad and accumulator memory parameters (sp_banks, sp_capacity, acc_capacity)​
+Gemmini scratchpad memory와 accumulator memory의 특성을 결정합니다. 전체 memory capacity(KiB 단위)와 scratchpad가 몇 개의 bank로 분할되는지가 이 parameters로 정의됩니다.
 
-Gemmini scratchpad memory와 accumulator memory의 특성을 결정합니다. 
+### Type parameters (inputType, outputType, accType)
 
-전체 memory capacity(KiB 단위)와 scratchpad가 몇 개의 bank로 분할되는지가 이 parameters로 정의됩니다.
+Gemmini 내부를 흐르는 data-type을 결정합니다. 예를 들어 inputType은 8-bit fixed-point일 수 있으며, matrix multiplication 중 partial accumulation을 담당하는 accType은 32-bit integer로 설정될 수 있습니다.
 
-​
+​outputType은 processing element(PE) 간에 전달되는 데이터 타입을 정의하며, 예를 들어 8-bit multiplication 결과가 16-bit로 확장되어 PE 간에 전달될 수 있습니다.
 
-Type parameters (inputType, outputType, accType)
+​사용 가능한 datatype 예시는 다음과 같습니다.
 
-Gemmini 내부를 흐르는 data-type을 결정합니다. 
+- SInt(8.W) : signed 8-bit integer
+- UInt(32.W) : unsigned 32-bit integer
+- Float(8, 24) : single-precision IEEE floating-point
+  - Floating-point datatype을 사용하는 경우, pe_latency parameter​를 함께 조정해야 할 수 있습니다. 이는 PE 내부에 삽입되는 shift register의 개수를 지정하며, multiply-accumulate 연산이 single cycle 내에 완료되지 않는 경우 필요합니다.
 
-​
-
-예를 들어 inputType은 8-bit fixed-point일 수 있으며, 
-
-matrix multiplication 중 partial accumulation을 담당하는 accType은 32-bit integer로 설정될 수 있습니다.
-
-​
-
-outputType은 processing element(PE) 간에 전달되는 데이터 타입을 정의하며, 
-
-예를 들어 8-bit multiplication 결과가 16-bit로 확장되어 PE 간에 전달될 수 있습니다.
-
-​
-
-사용 가능한 datatype 예시는 다음과 같습니다.
-
-SInt(8.W) : signed 8-bit integer
-
-UInt(32.W) : unsigned 32-bit integer
-
-Float(8, 24) : single-precision IEEE floating-point
-
-​
-
-Floating-point datatype을 사용하는 경우, pe_latency parameter​를 함께 조정해야 할 수 있습니다. 
-
-이는 PE 내부에 삽입되는 shift register의 개수를 지정하며, 
-
-multiply-accumulate 연산이 single cycle 내에 완료되지 않는 경우 필요합니다.
-
-​
-
-Access-execute queue parameters 
+### Access-execute queue parameters 
 
 (ld_queue_length, st_queue_length, ex_queue_length, rob_entries)
 
