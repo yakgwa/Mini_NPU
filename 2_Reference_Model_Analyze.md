@@ -317,52 +317,49 @@ H/W Architecture
     
     - 상위에서는 include.v를 include하여 Neuron Network 전반에서 공통 parameter를 사용.​
 
-Reference Model Sub (neuron.v) 분석
+## Reference Model Sub (neuron.v) 분석
 
 Top module의 각 Layer는 다수의 neuron instance로 구성됩니다.
 
 neuron.v는 입력 stream을 받아 dot-product(MAC) + bias + activation을 수행하는 최소 연산 Unit에 해당합니다.
 
-​
-
 이제 Reference Model의 Sub module인 neuron.v를 분석해보겠습니다.​
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_24.png" width="400"/>
 
 H/W Architecture
 
-공통 설정
+<div align="left">
 
-include.v include로 공통 parameter 사용.
++ 공통 설정
+    
+    + include.v include로 공통 parameter 사용.
+    
+    - neuron 인스턴스는 layerNo, neuronNo, numWeight 등으로 구분됨.
 
-neuron 인스턴스는 layerNo, neuronNo, numWeight 등으로 구분됨.
++ 입력 데이터 수신
 
-​
+    + 입력 데이터: myinput
+    
+    - 입력 유효 구간: myinputValid
+    
+    - myinputValid는 단순 valid가 아니라, weight read enable + 누적(accumulate) 조건으로 사용됨.
 
-입력 데이터 수신
++ Weight / Bias 로딩 방식
 
-입력 데이터: myinput
+    + Weight 로딩
 
-입력 유효 구간: myinputValid
+        + runtime 로딩 인터페이스 존재: weightValid, weightValue, config_layer_num, config_neuron_num
 
-myinputValid는 단순 valid가 아니라, weight read enable + 누적(accumulate) 조건으로 사용됨.
+        - 해당 neuron 선택 조건: (config_layer_num==layerNo) & (config_neuron_num==neuronNo)
+        
+        - 조건 만족 시, Weight_Memory에 write 수행(wen, w_addr, w_in).
 
-​
+    + Bias 로딩
 
-Weight / Bias 로딩 방식
+        + pretrained 정의 시: biasFile에서 $readmemb를 통해 preload.
 
-Weight 로딩
-
-runtime 로딩 인터페이스 존재: weightValid, weightValue, config_layer_num, config_neuron_num
-
-해당 neuron 선택 조건: (config_layer_num==layerNo) & (config_neuron_num==neuronNo)
-
-조건 만족 시, Weight_Memory에 write 수행(wen, w_addr, w_in).
-
-Bias 로딩
-
-pretrained 정의 시: biasFile에서 $readmemb를 통해 preload.
-
-pretrained 미정의 시: biasValid와 config match 조건을 만족할 경우 runtime 로딩.
+        - pretrained 미정의 시: biasValid와 config match 조건을 만족할 경우 runtime 로딩.
 
 ​
 
