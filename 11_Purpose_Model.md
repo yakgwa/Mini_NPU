@@ -428,161 +428,87 @@ initial code에 대해 Simulation을 수행하면 연산 결과는 그림과 같
         
                         $display("[L3_MAC] t=%0t k=%0d/%0d (raw=%0d) | in0=%0d w0=%0d | mul00=%0d acc00=%0d",
                 
-해당 Logic에서는 Layer 1 / 2 / 3에서 MAC 연산 결과, accumulator 누적값, bias add 및 saturation을 거친 
+해당 Logic에서는 Layer 1 / 2 / 3에서 MAC 연산 결과, accumulator 누적값, bias add 및 saturation을 거친 activation 출력까지의 각 단계 결과를 순차적으로 모니터링합니다.
 
-activation 출력까지의 각 단계 결과를 순차적으로 모니터링합니다.
+​Top-level FSM의 state 값을 기준으로 연산 구간을 Layer 단위로 분리하여 관찰하며, CALC_L1(=1), CALC_L2(=3), CALC_L3(=5) state를 각각 Layer 1, Layer 2, Layer 3의 연산 구간으로 mapping 합니다. 또한 CALC_Lx 상태 진입 시 group_cnt == 0 조건에서만 debug stream을 활성화하여, Layer 단위로 연산 결과를 분리하였습니다.
 
-​
+각 Layer의 연산 구간에서는 k_cnt를 기준으로, input과 weight에 대한 MAC 연산이 k index에 따라 반복 수행되는 과정을 순차적으로 출력합니다.
 
-Top-level FSM의 state 값을 기준으로 연산 구간을 Layer 단위로 분리하여 관찰하며, 
+​Layer 1에서는 k = 1 .. cur_input_len 범위에서, input과 weight를 기준으로 PE(0,0)에서 관측되는 mul00 및 acc00를 출력하여 k index에 따른 MAC 연산 동작을 확인합니다.
 
-CALC_L1(=1), CALC_L2(=3), CALC_L3(=5) state를 각각 Layer 1, Layer 2, Layer 3의 연산 구간으로 mapping 합니다.
+​반면 Layer 2와 Layer 3는 내부 buffer(buf_r_data_d1)로 인해 1-cycle latency가 존재하므로, 유효 MAC 구간을 raw k 기준 k = 2 .. cur_input_len + 1로 정의하고, 편의를 위해 k_eff = raw k - 1를 함께 표시하여 출력합니다.
 
-또한 CALC_Lx 상태 진입 시 group_cnt == 0 조건에서만 debug stream을 활성화하여, Layer 단위로 연산 결과를 분리하였습니다.
+​MAC log에서는 mul00(multiplier output)와 acc00(accumulator output)을 확인하여 multiplication result가 올바른지와 accumulation 과정에서 overflow, incorrect signed/unsigned interpretation, 또는 X propagation이 발생하는지를 k index 단위로 확인합니다.
 
-​
+​또한 MAC 종료 이후에도 내부 pipeline 처리로 인해 최종 output이 즉시 확정되지 않는 점을 고려하여, FLUSH_CYC = 2로 flush observation 구간을 설정하고 추가 snapshot을 출력합니다.
 
-각 Layer의 연산 구간에서는 k_cnt를 기준으로, 
+​MAC 종료 후 1 cycle 시점에는 ACC_AFTER_LAT1 snapshot을 통해 accumulator에 최종 반영된 값을 확인하며, 2 cycle 시점에는 AU_AFTER_LAT2 snapshot을 통해 psum_sel, bias_sel, bias add result(sum), saturation result(sat), activation output(act), 그리고 acc00를 함께 출력합니다. 
 
-input과 weight에 대한 MAC 연산이 k index에 따라 반복 수행되는 과정을 순차적으로 출력합니다.
+이때 output target 식별을 위해 img_idx와 neu_idx도 함께 기록합니다. 이를 통해 해당 logic은 MAC result, accumulator accumulation, bias add, saturation, activation output에 이르는 각 processing stage의 결과를 cycle 단위로 확인할 수 있도록 구성되었으며, waveform만으로는 확인하기 어려운 computation mismatch나 X propagation 발생 지점을 보다 세부적으로 분석할 수 있습니다.
 
-​
-
-Layer 1에서는 k = 1 .. cur_input_len 범위에서, input과 weight를 기준으로 PE(0,0)에서 관측되는 mul00 및 acc00를 출력하여 
-
-k index에 따른 MAC 연산 동작을 확인합니다.
-
-​
-
-반면 Layer 2와 Layer 3는 내부 buffer(buf_r_data_d1)로 인해 1-cycle latency가 존재하므로, 
-
-유효 MAC 구간을 raw k 기준 k = 2 .. cur_input_len + 1로 정의하고, 편의를 위해 k_eff = raw k - 1를 함께 표시하여 출력합니다.
-
-​
-
-MAC log에서는 mul00(multiplier output)와 acc00(accumulator output)을 확인하여 multiplication result가 올바른지와 
-
-accumulation 과정에서 overflow, incorrect signed/unsigned interpretation, 또는 X propagation이 발생하는지를 
-
-k index 단위로 확인합니다.
-
-​
-
-또한 MAC 종료 이후에도 내부 pipeline 처리로 인해 최종 output이 즉시 확정되지 않는 점을 고려하여, 
-
-FLUSH_CYC = 2로 flush observation 구간을 설정하고 추가 snapshot을 출력합니다.
-
-​
-
-MAC 종료 후 1 cycle 시점에는 ACC_AFTER_LAT1 snapshot을 통해 accumulator에 최종 반영된 값을 확인하며, 
-
-2 cycle 시점에는 AU_AFTER_LAT2 snapshot을 통해 psum_sel, bias_sel, bias add result(sum), saturation result(sat), activation output(act), 그리고 acc00를 함께 출력합니다. 
-
-이때 output target 식별을 위해 img_idx와 neu_idx도 함께 기록합니다.
-
-​
-
-이를 통해 해당 logic은 MAC result, accumulator accumulation, bias add, saturation, activation output에 이르는 
-
-각 processing stage의 결과를 cycle 단위로 확인할 수 있도록 구성되었으며, 
-
-waveform만으로는 확인하기 어려운 computation mismatch나 X propagation 발생 지점을 보다 세부적으로 분석할 수 있습니다.
-
-​
-
-Proposed Model - 3rd Simulation
+### Proposed Model - 3rd Simulation
 
 Debug Monitor logic을 추가한 이후, 검증한 연산 결과는 다음과 같습니다.
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_88.png" width="400"/>
 
+<div align="left">
 
-MAC 연산의 마지막 output 값이 누락되어 있으나, 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_89.png" width="400"/>
 
-당시 input과 weight가 모두 0이므로, 전체 결과에는 이상 없음.
+MAC 연산의 마지막 output 값이 누락되어 있으나, 당시 input과 weight가 모두 0이므로, 전체 결과에는 이상 없음.
+
+<div align="left">
 
 input과 weight가 입력된 이후 multiplication이 수행되고, 1-cycle 뒤에 accumulation이 정상적으로 이루어지는 것을 확인하여, MAC 연산 과정 자체에는 문제가 없음을 확인하였습니다. 
 
-​
-
-이후 문제 발생 지점을 분석하는 과정에서, 다른 스터디원의 분석 내용을 참고하여 Bias_Bank 부분에 문제가 있음을 확인하였습니다.
+​이후 문제 발생 지점을 분석하는 과정에서, 다른 스터디원의 분석 내용을 참고하여 Bias_Bank 부분에 문제가 있음을 확인하였습니다.
 
 ​
 
-<Bias_Bank.sv>
+### Bias_Bank.sv
 
-        case(layer_idx)
-            1: begin
-                for(k=0; k<4; k=k+1) begin
-                    if ((neuron_group*4 + k) < `numNeuronLayer1) sel_b[k] = w_b_l1[neuron_group*4 + k];
-                end
+                case(layer_idx)
+                    1: begin
+                        for(k=0; k<4; k=k+1) begin
+                            if ((neuron_group*4 + k) < `numNeuronLayer1) sel_b[k] = w_b_l1[neuron_group*4 + k];
+                        end
+                    end
+                    2: begin
+                        for(k=0; k<4; k=k+1) begin
+                            if ((neuron_group*4 + k) < `numNeuronLayer2) sel_b[k] = w_b_l2[neuron_group*4 + k];
+                        end
+                    end
+                    3: begin
+                        for(k=0; k<4; k=k+1) begin
+                            if ((neuron_group*4 + k) < `numNeuronLayer3) sel_b[k] = w_b_l3[neuron_group*4 + k];
+                        end
+                    end
+                endcase
+            end    
+        
+            always @(posedge clk) begin
+                b_out_packed <= { 
+                    {dataWidth{sel_b[3][dataWidth-1]}}, sel_b[3],       // 최상위 bit (MSB)를 dataWidth 만큼 복제하고 뒤에는 기존 sel_b 값 붙이기
+                    {dataWidth{sel_b[2][dataWidth-1]}}, sel_b[2],       // 예시로 dataWidth=8인 경우, sel_b[3]이 8'b1111_1010 (-6)라면,
+                                                                        // {dataWidth{sel_b[3][dataWidth-1]}}는 8'b1111_1111가 되고, 최종적으로 16'b1111_1111_1111_1010이 됨
+                    {dataWidth{sel_b[1][dataWidth-1]}}, sel_b[1],
+                    {dataWidth{sel_b[0][dataWidth-1]}}, sel_b[0]
+                };
             end
-            2: begin
-                for(k=0; k<4; k=k+1) begin
-                    if ((neuron_group*4 + k) < `numNeuronLayer2) sel_b[k] = w_b_l2[neuron_group*4 + k];
-                end
-            end
-            3: begin
-                for(k=0; k<4; k=k+1) begin
-                    if ((neuron_group*4 + k) < `numNeuronLayer3) sel_b[k] = w_b_l3[neuron_group*4 + k];
-                end
-            end
-        endcase
-    end    
 
-    always @(posedge clk) begin
-        b_out_packed <= { 
-            {dataWidth{sel_b[3][dataWidth-1]}}, sel_b[3],       // 최상위 bit (MSB)를 dataWidth 만큼 복제하고 뒤에는 기존 sel_b 값 붙이기
-            {dataWidth{sel_b[2][dataWidth-1]}}, sel_b[2],       // 예시로 dataWidth=8인 경우, sel_b[3]이 8'b1111_1010 (-6)라면,
-                                                                // {dataWidth{sel_b[3][dataWidth-1]}}는 8'b1111_1111가 되고, 최종적으로 16'b1111_1111_1111_1010이 됨
-            {dataWidth{sel_b[1][dataWidth-1]}}, sel_b[1],
-            {dataWidth{sel_b[0][dataWidth-1]}}, sel_b[0]
-        };
-    end
-개선포인트
+### 개선포인트
 
-1. 기존 neuron_group * 4 연산을 neuron_group << 2로 변경하여 resource 사용을 줄이고,
+1. 기존 neuron_group * 4 연산을 neuron_group << 2로 변경하여 resource 사용을 줄이고, logic depth 감소를 통해 critical path를 완화하며 가독성을 개선하였습니다.
 
-logic depth 감소를 통해 critical path를 완화하며 가독성을 개선하였습니다.
+​2. Bias 연산은 multiplication 결과가 누적된 partial sum의 최종 값에 bias를 더하는 방식으로 수행되며, 이 과정에서 psum과의 datawidth를 맞추기 위해 bit extension이 필요합니다. 
 
-​
+​기존 코드에서는 bias 값에 대해 sign extension을 적용하여 bit width를 확장하였으나, 이 방식은 bias의 Q-format을 유지하지 못한다는 문제가 있습니다.
 
-2. Bias 연산은 multiplication 결과가 누적된 partial sum의 최종 값에 bias를 더하는 방식으로 수행되며, 
+    ex) {dataWidth{sel_b[3][dataWidth-1]}} = {8{1'b1}} = 8'b1111_1111인 경우, sign extension을 적용하면 최종적으로 16'b1111_1111_1111_1010으로 확장됩니다. 이는 sign bit를 단순 복제하여 정수값 −6을 16-bit signed 정수로 표현한 결과로, bias가 가지는 fractional bit 정보를 전혀 반영하지 않습니다. (fraction bit란 2진수 소수점 이하 자릿수를 의미합니다.) 반면, MAC의 psum은 이미 Q-format(예: Q(16,8))으로 누적된 값이므로, 두 값을 직접 더할 경우 binary point 위치가 서로 달라져 실제 의도한 bias magnitude와 다른 값이 더해지게 됩니다.
+    이러한 문제를 해결하기 위해 sign extension 대신 left shift를 적용하여 bias에 fractional bit를 추가하도록 수정하였으며, 이를 통해 bias를 MAC의 psum Q-format(Q(16,8))과 정렬시켜 올바른 bias add가 수행되도록 하였습니다.
 
-이 과정에서 psum과의 datawidth를 맞추기 위해 bit extension이 필요합니다. 
-
-​
-
-기존 코드에서는 bias 값에 대해 sign extension을 적용하여 bit width를 확장하였으나, 
-
-이 방식은 bias의 Q-format을 유지하지 못한다는 문제가 있습니다.
-
-​
-
-ex) 
-
-{dataWidth{sel_b[3][dataWidth-1]}} = {8{1'b1}} = 8'b1111_1111인 경우, 
-sign extension을 적용하면 최종적으로 16'b1111_1111_1111_1010으로 확장됩니다.
-이는 sign bit를 단순 복제하여 정수값 −6을 16-bit signed 정수로 표현한 결과로, 
-
-bias가 가지는 fractional bit 정보를 전혀 반영하지 않습니다. 
-
-(** fraction bit란 2진수 소수점 이하 자릿수를 의미합니다.)
-
-​
-
-반면, MAC의 psum은 이미 Q-format(예: Q(16,8))으로 누적된 값이므로, 
-
-두 값을 직접 더할 경우 binary point 위치가 서로 달라져 실제 의도한 bias magnitude와 다른 값이 더해지게 됩니다.
-
-​
-
-이러한 문제를 해결하기 위해 sign extension 대신 left shift를 적용하여 bias에 fractional bit를 추가하도록 수정하였으며, 
-
-이를 통해 bias를 MAC의 psum Q-format(Q(16,8))과 정렬시켜 올바른 bias add가 수행되도록 하였습니다.
-
-ex) 
-
-$signed(sel_b[3]) <<< 8을 적용할 경우, sel_b[3] = 8'b1111_1010이 signed 값 −6으로 해석된 뒤 8-bit left shift가 적용되어, 
+ex) $signed(sel_b[3]) <<< 8을 적용할 경우, sel_b[3] = 8'b1111_1010이 signed 값 −6으로 해석된 뒤 8-bit left shift가 적용되어, 
 결과적으로 −6 << 8 = −1536, 즉 16'b1111_1010_0000_0000으로 변환됩니다.
     always @(*) begin
         // default (latch 방지)
