@@ -498,7 +498,7 @@ Simulation 결과 및 waveform 분석을 통해, 입력된 activation과 preload
 
 <div align="left">
 
-<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_63.png" width="400"/>
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_63.png" width="200"/>
 
 <div align="left">
 
