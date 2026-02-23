@@ -37,7 +37,7 @@ Windows CMD 또는 PowerShell을 실행합니다.
   
 3. 스크립트 실행
 
-      python genTestData.py
+          python genTestData.py
   
 ※ numpy Error 발생 시
 
