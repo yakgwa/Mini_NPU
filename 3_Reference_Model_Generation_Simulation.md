@@ -41,7 +41,7 @@ genTestData.py는 test data를 생성하는 스크립트이며, 해당 파일을
   
 ※ numpy Error 발생 시
 
-    만약 해당 오류가 발생한다면, 이는 Python 실행 환경에 NumPy 라이브러리가 설치되어 있지 않을 경우에 발생합니다.
+만약 해당 오류가 발생한다면, 이는 Python 실행 환경에 NumPy 라이브러리가 설치되어 있지 않을 경우에 발생합니다.
 
     genTestData.py는 Reference Model 기반의 연산 및 test data 생성을 위해 NumPy를 사용하므로, 사전에 해당 라이브러리가 설치되어 있어야 합니다.
 
@@ -81,13 +81,13 @@ Command Prompt 또는 PowerShell을 실행한 뒤, 아래 명령어를 통해 Nu
 
 1. ModelSim 설치
 
-ModelSIm 설치방법은 아래 link를 참조하시면 됩니다. 
+    ModelSIm 설치방법은 아래 link를 참조하시면 됩니다. 
 
-https://blog.naver.com/mini9136/224140269011
+    https://blog.naver.com/mini9136/224140269011
 
 2. ModelSim 실행
 
-ModelSim을 실행하면 다음과 같은 초기 화면이 표시됩니다. 좌측에는 Project 및 Library 구조가 나타나며, 우측에는 명령어 입력을 위한 Transcript 창이 기본으로 표시됩니다.
+    ModelSim을 실행하면 다음과 같은 초기 화면이 표시됩니다. 좌측에는 Project 및 Library 구조가 나타나며, 우측에는 명령어 입력을 위한 Transcript 창이 기본으로 표시됩니다.
 
 <div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_27.png" width="400"/>
 
@@ -107,7 +107,17 @@ ModelSim을 실행하면 다음과 같은 초기 화면이 표시됩니다. 좌�
 
 4. Add File
 
-Create Project가 완료되면 Add file to Project 창이 자동으로 표시됩니다. 이때, 기존에 다운로드한 Reference Model의 RTL 코드가 위치한 다음 경로를 선택합니다.
+Create Project가 완료되면 Add file to Project 창이 자동으로 표시됩니다. 
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_30.png" width="400"/>
+
+<div align="left">
+
+이때, 기존에 다운로드한 Reference Model의 RTL 코드가 위치한 다음 경로를 선택합니다.
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_31.png" width="400"/>
+
+<div align="left">
 
 해당 디렉터리를 선택한 후, directory 내의 모든 RTL 파일을 추가(Open) 하여 Project에 포함시킵니다.
 
@@ -117,21 +127,25 @@ RTL 파일을 Project에 추가하면 다음과 같이 화면이 전환되며, �
 
 이후 상단 메뉴에서 Compile → Compile All을 선택하여 전체 RTL 파일에 대해 컴파일을 진행합니다.
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_32.png" width="400"/>
+
+<div align="left">
+
 ※ File을 찾지 못해 발생하는 Error
 
 컴파일을 진행했을 때 no such file 오류가 발생하는 경우가 있습니다.
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_33.png" width="400"/>
+
+<div align="left">
 
 이는 top_sim.v에서 참조하는 include.v 파일을 ModelSim이 찾지 못해 발생하는 문제입니다.
 
 이 경우, top_sim.v 내 include.v를 포함하는 부분을 다음과 같이 수정합니다.
 
-`include "include.v"
-또한, 
+        `include "include.v"
 
-작업 Directory(ModelSim 실행 디렉터리) 내에 tb 및 rtl 디렉터리의 모든 파일을 함께 위치시키면 해당 오류를 해결할 수 있습니다.
-
-
-​
+또한, 작업 Directory(ModelSim 실행 디렉터리) 내에 tb 및 rtl 디렉터리의 모든 파일을 함께 위치시키면 해당 오류를 해결할 수 있습니다.
 
 6. Simulation
 
