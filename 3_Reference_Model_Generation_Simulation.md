@@ -90,9 +90,21 @@ https://blog.naver.com/mini9136/224140269011
 
 ModelSim을 실행하면 다음과 같은 초기 화면이 표시됩니다. 좌측에는 Project 및 Library 구조가 나타나며, 우측에는 명령어 입력을 위한 Transcript 창이 기본으로 표시됩니다.
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_27.png" width="400"/>
+
+<div align="left">
+
 3. Create Project 
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_28.png" width="400"/>
+
+<div align="left">
+
 상단 메뉴에서 File → New → Project를 선택하면 Project 생성 창이 표시됩니다. 이때 Project Name은 testbench 이름과 동일하게 top_sim으로 설정하는 것이 관리 측면에서 용이합니다. 이후 Project Location에서 ModelSim 실행 디렉터리를 지정한 뒤 OK를 선택하면 Project가 생성됩니다.
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_29.png" width="400"/>
+
+<div align="left">
 
 4. Add File
 
