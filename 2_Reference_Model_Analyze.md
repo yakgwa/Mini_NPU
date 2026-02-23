@@ -442,7 +442,7 @@ Systolic Array의 개념과 연산 방식은 아래 링크와 뒤에 이어질 �
 
 ​특히, 동일한 weight가 여러 cycle 동안 반복 사용되고 MAC 연산이 시간 축으로만 확장되는 구조는 하드웨어 병렬성을 충분히 활용하지 못하는 한계를 가집니다.
 
-​### FC 구조와 Systolic Array 구조 비교
+### FC 구조와 Systolic Array 구조 비교
 
 이러한 특성 차이는 FC 구조와 Systolic Array 구조를 비교하면 보다 명확해집니다.
 
