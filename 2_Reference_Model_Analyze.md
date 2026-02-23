@@ -259,17 +259,17 @@ H/W Architecture
 
 + Controller (Layer 출력 직렬화: vector → scalar)
 
-+ 각 Layer 출력은 vector 형태이므로, 다음 Layer에 입력으로 전달하기 위해 직렬화(serialize).
-
-- 이를 위해 각 Layer 뒤에는 IDLE/SEND 2-state FSM이 배치.
-
-    + IDLE
-
-    - oX_valid[0]가 assert되면, Layer 출력 vector(xX_out)을 holdData_X에 저장
-
-    - 상태를 SEND로 전환
-
-    -SEND
+    + 각 Layer 출력은 vector 형태이므로, 다음 Layer에 입력으로 전달하기 위해 직렬화(serialize).
+    
+    - 이를 위해 각 Layer 뒤에는 IDLE/SEND 2-state FSM이 배치.
+    
+        + IDLE
+    
+        - oX_valid[0]가 assert되면, Layer 출력 vector(xX_out)을 holdData_X에 저장
+    
+        - 상태를 SEND로 전환
+    
+        -SEND
 
 holdData_X의 LSB(dataWidth)를 out_data_X로 출력
 
