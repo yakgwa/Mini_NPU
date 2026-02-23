@@ -28,7 +28,7 @@ genTestData.py는 test data를 생성하는 스크립트이며, 해당 파일을
 
 1. Command Prompt 실행
 
-&nbsp;Windows CMD 또는 PowerShell을 실행합니다.
+    Windows CMD 또는 PowerShell을 실행합니다.
 
 2. Python 스크립트가 있는 디렉터리로 이동
 
