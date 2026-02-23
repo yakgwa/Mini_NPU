@@ -56,9 +56,7 @@ GPU와 비교했을 때 TPU는 inference workload에 최적화된 연산 구조�
 ​
 
 <div align="left">TPU는 deterministic execution model을 사용하며, 99th-percentile response time(p99 latency) 요구사항에 더 잘 맞는 구조입니다.
-→ 이는 추론 workload가 반복적이고 입력 크기와 연산 패턴이 고정되어 실행과 결과가 예측 가능하기 때문이며,
-
-실제 서비스 환경에서 정해진 시간 내에 전체 요청의 99%가 응답되는 요구사항을 안정적으로 만족할 수 있습니다.
+→ 이는 추론 workload가 반복적이고 입력 크기와 연산 패턴이 고정되어 실행과 결과가 예측 가능하기 때문이며, 실제 서비스 환경에서 정해진 시간 내에 전체 요청의 99%가 응답되는 요구사항을 안정적으로 만족할 수 있습니다.
 
 이러한 설계 선택 덕분에, TPU는 많은 MAC과 큰 on-chip memory를 포함하고 있음에도 불구하고 상대적으로 작고 저전력인 칩으로 구현될 수 있었습니다.
 
@@ -127,24 +125,19 @@ Inference: Training을 통해 이미 학습된 weight를 그대로 사용하여,
 
 이 weight에 접근하는 데 소요되는 시간과 에너지 비용이 전체 성능을 제한하는 주요 요인이 될 수 있습니다.
 
-​
-
-이는 performance와 power 측면에서 모두 불리하게 작용합니다.
-
-Batch 단위로 동일한 weight를 재사용하면 이러한 접근 비용을 amortize하여 효율을 높일 수 있지만,
+이는 performance와 power 측면에서 모두 불리하게 작용합니다. Batch 단위로 동일한 weight를 재사용하면 이러한 접근 비용을 amortize하여 효율을 높일 수 있지만,
 
 실제 서비스 환경에서는 엄격한 latency 제한으로 인해 batch size를 크게 증가시키는 것이 항상 가능한 선택은 아닙니다.
 
-​
+이러한 배경에서 본 논문은, 데이터센터 추론 환경의 특성에 보다 적합한 하드웨어 구조로서 Tensor Processing Unit(TPU) 아키텍처를 제시합니다.
 
-이러한 배경에서 본 논문은,
-
-데이터센터 추론 환경의 특성에 보다 적합한 하드웨어 구조로서 Tensor Processing Unit(TPU) 아키텍처를 제시합니다.
-
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_5.png" width="400"/>
 
 Neural Network 유형별 비교:
 
 Layer 수와 Weight 수를 중심으로 구조를 중점적으로 Check.
+
+<div align="left">
 
 2. TPU Origin, Architecture, Implementation, and Software
 
