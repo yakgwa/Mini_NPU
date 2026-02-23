@@ -433,141 +433,45 @@ Systolic Array의 개념과 연산 방식은 아래 링크와 뒤에 이어질 �
 
 ### 왜 FC 대신 Systolic Array인가
 
-기존 Reference Model의 Fully Connected(FC) 구조에서 각 neuron은 하나의 입력과 하나의 weight를 받아 곱셈을 수행하고,
+기존 Reference Model의 Fully Connected(FC) 구조에서 각 neuron은 하나의 입력과 하나의 weight를 받아 곱셈을 수행하고, 이를 입력 개수만큼 순차적으로 누적(accumulate)하는 방식으로 동작합니다.
 
-이를 입력 개수만큼 순차적으로 누적(accumulate)하는 방식으로 동작합니다.
+이 구조는 연산 흐름이 직관적이고 RTL 구현 및 디버깅이 비교적 단순하다는 장점을 가집니다.
 
-​
+​그러나 연산이 1-Dimension으로 순차 수행되기 때문에, 연산량이 증가할수록 성능이 입력 길이에 직접적으로 종속되며, PPA(Power, Performance, Area) 관점에서는 효율적인 구조라고 보기 어렵습니다.
 
-이 구조는
+​특히, 동일한 weight가 여러 cycle 동안 반복 사용되고 MAC 연산이 시간 축으로만 확장되는 구조는 하드웨어 병렬성을 충분히 활용하지 못하는 한계를 가집니다.
 
-연산 흐름이 직관적이고
-
-RTL 구현 및 디버깅이 비교적 단순하다는 장점을 가집니다.
-
-​
-
-그러나 연산이 1-Dimension으로 순차 수행되기 때문에, 연산량이 증가할수록 성능이 입력 길이에 직접적으로 종속되며,
-
-PPA(Power, Performance, Area) 관점에서는 효율적인 구조라고 보기 어렵습니다.
-
-​
-
-특히,
-
-동일한 weight가 여러 cycle 동안 반복 사용되고
-
-MAC 연산이 시간 축으로만 확장되는 구조는 하드웨어 병렬성을 충분히 활용하지 못하는 한계를 가집니다.
-
-​
-
-FC 구조와 Systolic Array 구조 비교
+​### FC 구조와 Systolic Array 구조 비교
 
 이러한 특성 차이는 FC 구조와 Systolic Array 구조를 비교하면 보다 명확해집니다.
-
-구분
-
-Fully Connected
-
-Systolic Array
-
-연산 차원
-
-1-D (시간 축)
-
-2-D (공간 + 시간)
-
-MAC 수행 방식
-
-순차 수행
-
-공간적 병렬 수행
-
-Weight 사용
-
-반복 재사용 (시간적)
-
-PE 내부 고정(preload)
-
-병렬성 활용
-
-제한적
-
-높음
-
-성능 확장성
-
-입력 길이에 종속
-
-Array 크기에 따라 확장
-
-PPA 관점
-
-비효율적
-
-상대적으로 효율적
-
 ​
 
-Systolic Array 도입 배경
+### Systolic Array 도입 배경
 
 이러한 한계를 개선하기 위해, Reference Model의 FC 연산을 Systolic Array 구조로 대체하고자 합니다.
 
-​
+​Systolic Array는 다수의 Processing Element(PE)를 2-Dimensional array 형태로 배치하고, 데이터가 시간에 따라 규칙적으로 이동하면서 연산이 수행되는 구조입니다.
 
-Systolic Array는 다수의 Processing Element(PE)를 2-Dimensional array 형태로 배치하고,
+​이 구조에서는 다수의 MAC 연산이 공간적으로 병렬 수행되고 데이터 이동과 연산이 구조적으로 결합되며 그 결과 성능 및 에너지 효율 측면에서 이점을 확보할 수 있습니다.
 
-데이터가 시간에 따라 규칙적으로 이동하면서 연산이 수행되는 구조입니다.
+​즉, 기존 FC 구조가 시간 축(1D)으로 연산을 확장했다면, Systolic Array는 공간 + 시간(2D)으로 연산을 전개하는 구조라고 볼 수 있습니다.
 
-​
-
-이 구조에서는
-
-다수의 MAC 연산이 공간적으로 병렬 수행되고
-
-데이터 이동과 연산이 구조적으로 결합되며
-
-그 결과 성능 및 에너지 효율 측면에서 이점을 확보할 수 있습니다.
-
-​
-
-즉, 기존 FC 구조가 시간 축(1D)으로 연산을 확장했다면,
-
-Systolic Array는 공간 + 시간(2D)으로 연산을 전개하는 구조라고 볼 수 있습니다.
-
-​
-
-FC 연산을 Systolic Array에 적용하기 위한 고려사항
+​### FC 연산을 Systolic Array에 적용하기 위한 고려사항
 
 다만 Fully Connected 연산은 1-D dot-product 특성을 가지므로, Systolic Array에 직접 매핑할 수는 없습니다.
 
-​
+따라서, 연산을 tile 단위로 분해하고 입력과 weight를 어떤 방식으로 배치할지에 대한 Dataflow 정의가 필요합니다.
 
-따라서,
-
-연산을 tile 단위로 분해하고
-
-입력과 weight를 어떤 방식으로 배치할지에 대한
-
-Dataflow 정의가 필요합니다.
-
-​
-
-본 구현에서는 Weight-Stationary(WS) Dataflow를 사용합니다.
+​본 구현에서는 Weight-Stationary(WS) Dataflow를 사용합니다.
 
 Weight를 tile 단위로 분할하여 Systolic Array 내부 PE에 preload하고, 입력 데이터만을 시간에 따라 전달하는 방식을 선택하였습니다.
 
-​
-
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_25.png" width="400"/>
 
 4 x 4 Systolic Array (Weight Stationoary)를 적용한 예상 Block-Diagram
+    
+<div align="left">
 
-이와 같은 구조를 통해 기존 FC 기반 Reference Model 대비 연산 병렬성을 효과적으로 확장할 수 있으며, 
+이와 같은 구조를 통해 기존 FC 기반 Reference Model 대비 연산 병렬성을 효과적으로 확장할 수 있으며, 입력 차원 증가에 따른 성능 저하를 완화할 수 있습니다.
 
-입력 차원 증가에 따른 성능 저하를 완화할 수 있습니다.
-
-​
-
-이후에는 
-
-Systolic Array가 적용된 Reference Model의 전체 Dataflow와 각 Block의 역할을 중심으로 설계를 구체화해보도록 하겠습니다.
+​이후에는 Systolic Array가 적용된 Reference Model의 전체 Dataflow와 각 Block의 역할을 중심으로 설계를 구체화해보도록 하겠습니다.
