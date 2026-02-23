@@ -221,57 +221,30 @@ Matrix Unit (Systolic array) 예시
 ​TPU는 대부분의 값이 실제 연산에 사용되는 dense 행렬(대부분의 원소가 0이 아닌 행렬)을 대상으로 설계되었으며, chip을 빠르게 개발하고 성능을 안정적으로 확보하기 위해 sparse 연산 지원은 의도적으로 제외되었습니다.
 
 ​Weight는 Chip 내부 Weight FIFO를 통해 공급되며, 이 FIFO는 Chip 외부에 위치한 8 GiB DRAM 기반 Weight Memory에서 데이터를 읽어옵니다.
-→ off-chip DRAM(그림 내 DDR3 DRAM Block) 접근 시 발생하는 수백~수천 cycle의 지연을 피하기 위해,
-
-weight를 미리 FIFO에 적재함으로써 Matrix Unit에 연속적인 데이터 공급이 가능하도록 설계되었습니다.
+→ off-chip DRAM(그림 내 DDR3 DRAM Block) 접근 시 발생하는 수백~수천 cycle의 지연을 피하기 위해, weight를 미리 FIFO에 적재함으로써 Matrix Unit에 연속적인 데이터 공급이 가능하도록 설계되었습니다.
 
 ​Inference 단계에서 weight는 read-only이며, 이 용량은 여러 model을 동시에 활성화하기에 충분합니다.
-→ training 단계에서 이미 결정된 weight를 사용하므로 inference 과정에서는 값이 변경되지 않습니다. →따라서 하드웨어 설계에서는 weight memory를 read-only로 가정하고 최적화할 수 있습니다.
-
-​
+→ training 단계에서 이미 결정된 weight를 사용하므로 inference 과정에서는 값이 변경되지 않습니다. →따라서 하드웨어 설계에서는 weight memory를 read-only로 가정하고 최적화할 수 있습니다.​
 
 ### 2.5 Unified Buffer와 데이터 이동
 
 <div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_9.png" width="400"/>
+ 
 TPU Floorplan
 
-<div align="left">Matrix Unit의 입력과 중간 결과는 24 MiB 크기의 chip 내부 Unified Buffer에 저장되며,
+<div align="left">Matrix Unit의 입력과 중간 결과는 24 MiB 크기의 chip 내부 Unified Buffer에 저장되며, 이 buffer는 Matrix Unit의 입력으로 직접 사용될 수 있습니다.
+→ Unified Buffer(UB)는 chip 내부에 위치한 대용량 software-managed scratchpad memory로, Matrix 연산에 사용되는 activation과 partial sum을 저장합니다. UB에 저장된 데이터는 DRAM을 경유하지 않고 Matrix Unit으로 직접 공급되도록 설계되었습니다.
 
-이 buffer는 Matrix Unit의 입력으로 직접 사용될 수 있습니다.\
+​CPU host memory와 Unified Buffer 사이의 데이터 이동은 programmable DMA controller가 담당합니다.
+→ DMA controller는 Matrix Unit의 연산과 독립적으로 동작하며, 연산이 진행되는 동안 다음 layer의 입력이나 다음 tile을 사전에(prefetch)하여 Unified Buffer로 전송할 수 있습니다. 이를 통해 데이터 이동 latency를 연산과 겹쳐 숨길 수 있고, Matrix Unit은 가능한 한 연산에만 집중하도록 유지됩니다.
 
-→ Unified Buffer(UB)는 chip 내부에 위치한 대용량 software-managed scratchpad memory로,
-
-Matrix 연산에 사용되는 activation과 partial sum을 저장합니다.
-
-UB에 저장된 데이터는 DRAM을 경유하지 않고 Matrix Unit으로 직접 공급되도록 설계되었습니다.
-
-​
-
-CPU host memory와 Unified Buffer 사이의 데이터 이동은 programmable DMA controller가 담당합니다.
-
-→ DMA controller는 Matrix Unit의 연산과 독립적으로 동작하며, 
-
-연산이 진행되는 동안 다음 layer의 입력이나 다음 tile을 사전에(prefetch)하여 Unified Buffer로 전송할 수 있습니다.
-
-이를 통해 데이터 이동 latency를 연산과 겹쳐 숨길 수 있고, Matrix Unit은 가능한 한 연산에만 집중하도록 유지됩니다.
-
-​
-
-Die floorplan을 보면, Unified Buffer는 die 면적의 약 1/3,
-
-Matrix Multiply Unit은 약 1/4를 차지하여,
-
-전체 datapath가 die 면적의 약 2/3를 구성합니다.
+Die floorplan을 보면, Unified Buffer는 die 면적의 약 1/3, Matrix Multiply Unit은 약 1/4를 차지하여, 전체 datapath가 die 면적의 약 2/3를 구성합니다.
 
 반면, control logic은 전체의 **약 2%**에 불과합니다.
 
-→ 이는 TPU가 die 면적의 대부분을 datapath와 데이터 저장·이동을 위한 구조에 할당하고, control logic은 최소화함으로써,
+→ 이는 TPU가 die 면적의 대부분을 datapath와 데이터 저장·이동을 위한 구조에 할당하고, control logic은 최소화함으로써, 연산 유닛의 utilization을 높이고 데이터 재사용과 처리량(throughput)을 극대화하는 방향으로 설계되었음을 보여줍니다.
 
-연산 유닛의 utilization을 높이고 데이터 재사용과 처리량(throughput)을 극대화하는 방향으로 설계되었음을 보여줍니다.
-
-​
-
-2.6 Instruction과 실행 모델
+### 2.6 Instruction과 실행 모델
 
 TPU instruction은 비교적 느린 PCIe bus를 효율적으로 사용하기 위해 repeat field를 포함한 CISC 형태를 따르며, 
 
@@ -279,114 +252,73 @@ TPU instruction은 비교적 느린 PCIe bus를 효율적으로 사용하기 위
 
 → 짧은 instruction을 자주 보내는 RISC 방식보다는 하나의 instruction이 많은 연산을 반복 수행 가능한 구조를 사용합니다.
 
-​
-
 TPU의 instruction 수는 최소화되어 있으며, 전체 동작은 다음 다섯 가지 핵심 instruction을 중심으로 구성됩니다.
 
-Read_Host_Memory:  
+- Read_Host_Memory:  
 
 → CPU host memory(DRAM)에 저장된 입력 (activation) 를 Chip 내부 Unified Buffer(UB)로 전송합니다.
 
-Read_Weights: 
+- Read_Weights: 
 
-→Weight Memory로부터 weight를 미리 읽어, Matrix Unit 입력으로 사용되는 Weight FIFO에 저장합니다.
+→ Weight Memory로부터 weight를 미리 읽어, Matrix Unit 입력으로 사용되는 Weight FIFO에 저장합니다.
 
-Matrix_Multiply / Convolve: 
+- Matrix_Multiply / Convolve: 
 
 → Unified Buffer의 activation을 Matrix Unit에 공급하여, 연산 결과를 Accumulator에 누적하는 
 
 matrix multiplication 또는 convolution을 수행합니다.
 
-Activate (ReLU, Sigmoid 등)
+- Activate (ReLU, Sigmoid 등)
 
 → Accumulator 연산 결과에 nonlinear function을 적용한 뒤 UB로 저장하며, 
 
 필요 시 추가 hardware를 통해 pooling operation을 수행합니다.
 
-Write_Host_Memory
+- Write_Host_Memory
 
 → Unified Buffer에 저장된 결과 데이터를 CPU host memory(DRAM)로 기록합니다.
 
-​
-
 TPU microarchitecture의 기본 철학은 Matrix Multiply Unit이 stall 없이 최대한 바쁘게 유지되도록 하는 것입니다.
 
-이를 위해 TPU는 CISC instruction에 대해 4-stage pipeline을 사용하며,
+이를 위해 TPU는 CISC instruction에 대해 4-stage pipeline을 사용하며, 서로 다른 instruction의 실행을 overlap시켜 latency를 숨기는 구조를 채택합니다.
 
-서로 다른 instruction의 실행을 overlap시켜 latency를 숨기는 구조를 채택합니다.
-
-​
-
-이때 Read_Weights instruction은 decoupled-access/execute 방식을 따르며,
-
-weight fetch가 완료되기 전에 instruction 자체는 먼저 완료될 수 있습니다.
+이때 Read_Weights instruction은 decoupled-access/execute 방식을 따르며, weight fetch가 완료되기 전에 instruction 자체는 먼저 완료될 수 있습니다.
 
 다만, input activation 또는 weight 데이터가 준비되지 않은 경우 Matrix Unit은 stall하게 됩니다.
-
 → Read_Weights instruction은 weight를 가져오라는 요청만 먼저 발행하고, 
 
 실제 weight 데이터의 도착 여부와는 독립적으로 instruction 완료가 가능합니다. 
 
-그러나 Matrix Unit이 실제 연산을 수행하기 위해서는 input activation과 weight가 모두 준비되어 있어야 하므로, 
+그러나 Matrix Unit이 실제 연산을 수행하기 위해서는 input activation과 weight가 모두 준비되어 있어야 하므로, 필요한 데이터가 준비되지 않은 경우 연산 단계에서는 stall이 발생합니다.
 
-필요한 데이터가 준비되지 않은 경우 연산 단계에서는 stall이 발생합니다.
-
-​
-
-또한 네트워크 layer 간에는 데이터 의존성이 존재하므로, 이전 layer의 activation이 Unified Buffer에 모두 준비될 때까지
-
-다음 MatrixMultiply instruction은 명시적인 synchronization을 기다리며 RAW stall이 발생할 수 있습니다.
-
+​또한 네트워크 layer 간에는 데이터 의존성이 존재하므로, 이전 layer의 activation이 Unified Buffer에 모두 준비될 때까지 다음 MatrixMultiply instruction은 명시적인 synchronization을 기다리며 RAW stall이 발생할 수 있습니다.
 → 이는 단순한 memory access 지연이 아니라, layer 간 Read-After-Write(RAW) 데이터 의존성에 의해 발생하는 stall입니다. 
 
-즉, instruction은 issue 및 완료될 수 있으나, 이전 layer의 결과 activation이 Unified Buffer에 완전히 기록되기 전까지는 
+즉, instruction은 issue 및 완료될 수 있으나, 이전 layer의 결과 activation이 Unified Buffer에 완전히 기록되기 전까지는 다음 MatrixMultiply 연산이 시작될 수 없습니다.
 
-다음 MatrixMultiply 연산이 시작될 수 없습니다.
+​이로 인해 TPU의 pipeline overlap은 전통적인 RISC pipeline처럼 고정된 1-cycle 단위가 아니라, instruction에 따라 수백~수천 cycle 동안 하나의 stage를 점유하는 형태로 동작합니다.
 
-​
+### 2.7 Systolic Execution
 
-이로 인해 TPU의 pipeline overlap은 전통적인 RISC pipeline처럼 고정된 1-cycle 단위가 아니라,
+대용량 SRAM 접근은 산술 연산에 비해 훨씬 높은 전력 소모를 유발합니다. 이에 따라 TPU는 Unified Buffer 접근을 최소화하고 데이터 재사용을 극대화하기 위한 수단으로 systolic execution을 채택했습니다.
 
-instruction에 따라 수백~수천 cycle 동안 하나의 stage를 점유하는 형태로 동작합니다.
-
-​
-
-2.7 Systolic Execution
-
-대용량 SRAM 접근은 산술 연산에 비해 훨씬 높은 전력 소모를 유발합니다.
-
-이에 따라 TPU는 Unified Buffer 접근을 최소화하고 데이터 재사용을 극대화하기 위한 수단으로 systolic execution을 채택했습니다.
-
-
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_10.png" width="400"/>
+ 
 Google TPU의 systolic execution
 
-이 그림을 이해하기 위해서는, 먼저 systolic array 구조에 대해 이해할 필요가 있습니다.
+<div align="left">이 그림을 이해하기 위해서는, 먼저 systolic array 구조에 대해 이해할 필요가 있습니다.
 
-​
+Systolic execution은 다수의 Processing Element(PE)를 배열 형태로 연결하고, activation과 weight를 PE 간에 전달하면서 중간 결과를 외부 메모리에 다시 저장하지 않고 Matrix Unit 내부에서 연속적으로 multiply-accumulate 연산을 수행하는 방식입니다.
 
-Systolic execution은 다수의 Processing Element(PE)를 배열 형태로 연결하고,
+각 PE는 activation과 weight를 입력으로 받아 MAC 연산을 수행하고, partial sum을 누적하는 동시에 activation 또는 결과를 인접한 PE로 전달합니다.
 
-activation과 weight를 PE 간에 전달하면서 중간 결과를 외부 메모리에 다시 저장하지 않고
-
-Matrix Unit 내부에서 연속적으로 multiply-accumulate 연산을 수행하는 방식입니다.
-
-​
-
-각 PE는 activation과 weight를 입력으로 받아 MAC 연산을 수행하고,
-
-partial sum을 누적하는 동시에 activation 또는 결과를 인접한 PE로 전달합니다.
-
-이러한 구조를 통해 연산에 필요한 데이터는 PE 간 이동을 통해 재사용되며,
-
-Unified Buffer에 대한 반복적인 read/write가 크게 줄어듭니다.
+이러한 구조를 통해 연산에 필요한 데이터는 PE 간 이동을 통해 재사용되며, Unified Buffer에 대한 반복적인 read/write가 크게 줄어듭니다.
 
 ​
 
 연산 방법은 다음과 같습니다.
 
-아래 그림들은 추후 실제 Mini-TPU 설계에서 사용할 2×2 systolic array 구조를 기반으로,
-
-systolic array에서 matrix multiplication이 시간에 따라 어떻게 진행되는지를 설명하기 위한 것입니다.
+아래 그림들은 추후 실제 Mini-TPU 설계에서 사용할 2×2 systolic array 구조를 기반으로,systolic array에서 matrix multiplication이 시간에 따라 어떻게 진행되는지를 설명하기 위한 것입니다.
 
 ​
 
@@ -394,11 +326,15 @@ systolic array에서 matrix multiplication이 시간에 따라 어떻게 진행�
 
 그 곱 결과인 행렬 C = A × B를 계산하는 과정을 예로 설명합니다.
 
-
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_11.png" width="400"/>
+ 
 2×2  행렬 곱 연산 예시
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_12.png" width="400"/>
 
-2×2 systolic array​
+2×2 systolic array
+
+<div align="left">​
 
 ​
 
