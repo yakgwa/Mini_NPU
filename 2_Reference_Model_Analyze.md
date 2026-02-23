@@ -138,7 +138,8 @@ sendData() task 내부 동작을 시간 순서로 정리하면 다음과 같습�
 ### 7.1 파일 로드
 
     $readmemb(fileName, in_mem);
-    in_mem[0:784]에 pixel 및 label 저장
+
+→ in_mem[0:784]에 pixel 및 label 저장
 
 ### 7.2 Pixel Stream 전송
 
