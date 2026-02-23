@@ -99,7 +99,7 @@ Command Prompt 또는 PowerShell을 실행한 뒤, 아래 명령어를 통해 Nu
 
 <div align="left">
 
-상단 메뉴에서 File → New → Project를 선택하면 Project 생성 창이 표시됩니다. 이때 Project Name은 testbench 이름과 동일하게 top_sim으로 설정하는 것이 관리 측면에서 용이합니다. 이후 Project Location에서 ModelSim 실행 디렉터리를 지정한 뒤 OK를 선택하면 Project가 생성됩니다.
+    상단 메뉴에서 File → New → Project를 선택하면 Project 생성 창이 표시됩니다. 이때 Project Name은 testbench 이름과 동일하게 top_sim으로 설정하는 것이 관리 측면에서 용이합니다. 이후 Project Location에서 ModelSim 실행 디렉터리를 지정한 뒤 OK를 선택하면 Project가 생성됩니다.
 
 <div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_29.png" width="400"/>
 
@@ -107,25 +107,25 @@ Command Prompt 또는 PowerShell을 실행한 뒤, 아래 명령어를 통해 Nu
 
 4. Add File
 
-Create Project가 완료되면 Add file to Project 창이 자동으로 표시됩니다. 
+    Create Project가 완료되면 Add file to Project 창이 자동으로 표시됩니다. 
 
 <div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_30.png" width="400"/>
 
 <div align="left">
 
-이때, 기존에 다운로드한 Reference Model의 RTL 코드가 위치한 다음 경로를 선택합니다.
+    이때, 기존에 다운로드한 Reference Model의 RTL 코드가 위치한 다음 경로를 선택합니다.
 
 <div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_31.png" width="400"/>
 
 <div align="left">
 
-해당 디렉터리를 선택한 후, directory 내의 모든 RTL 파일을 추가(Open) 하여 Project에 포함시킵니다.
+    해당 디렉터리를 선택한 후, directory 내의 모든 RTL 파일을 추가(Open) 하여 Project에 포함시킵니다.
 
 5. Compile
 
-RTL 파일을 Project에 추가하면 다음과 같이 화면이 전환되며, 추가된 RTL 파일 목록이 표시됩니다.
+    RTL 파일을 Project에 추가하면 다음과 같이 화면이 전환되며, 추가된 RTL 파일 목록이 표시됩니다.
 
-이후 상단 메뉴에서 Compile → Compile All을 선택하여 전체 RTL 파일에 대해 컴파일을 진행합니다.
+    이후 상단 메뉴에서 Compile → Compile All을 선택하여 전체 RTL 파일에 대해 컴파일을 진행합니다.
 
 <div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_32.png" width="400"/>
 
@@ -133,56 +133,41 @@ RTL 파일을 Project에 추가하면 다음과 같이 화면이 전환되며, �
 
 ※ File을 찾지 못해 발생하는 Error
 
-컴파일을 진행했을 때 no such file 오류가 발생하는 경우가 있습니다.
+    컴파일을 진행했을 때 no such file 오류가 발생하는 경우가 있습니다.
 
 <div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_33.png" width="400"/>
 
 <div align="left">
 
-이는 top_sim.v에서 참조하는 include.v 파일을 ModelSim이 찾지 못해 발생하는 문제입니다.
+    이는 top_sim.v에서 참조하는 include.v 파일을 ModelSim이 찾지 못해 발생하는 문제입니다.
 
-이 경우, top_sim.v 내 include.v를 포함하는 부분을 다음과 같이 수정합니다.
+    이 경우, top_sim.v 내 include.v를 포함하는 부분을 다음과 같이 수정합니다.
 
         `include "include.v"
 
-또한, 작업 Directory(ModelSim 실행 디렉터리) 내에 tb 및 rtl 디렉터리의 모든 파일을 함께 위치시키면 해당 오류를 해결할 수 있습니다.
+    또한, 작업 Directory(ModelSim 실행 디렉터리) 내에 tb 및 rtl 디렉터리의 모든 파일을 함께 위치시키면 해당 오류를 해결할 수 있습니다.
 
 6. Simulation
 
-컴파일이 문제없이 완료되면 Simulation을 진행합니다.
+    컴파일이 문제없이 완료되면 Simulation을 진행합니다.
 
-​
+    top_sim.v를 선택한 후 Simulate를 클릭하면 Start Simulation 창이 표시됩니다.
 
-top_sim.v를 선택한 후 Simulate를 클릭하면 Start Simulation 창이 표시됩니다.
+    해당 창에서 work → top_sim을 선택하면 Simulation 화면이 실행됩니다.
 
-해당 창에서 work → top_sim을 선택하면 Simulation 화면이 실행됩니다.
+ <div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_34.png" width="400"/>
 
-​
+<div align="left">  
 
+    Waveform을 확인하기 위해 View → Wave를 선택하여 Wave 창을 엽니다.
 
-Waveform을 확인하기 위해 View → Wave를 선택하여 Wave 창을 엽니다.
-
-이후 확인하고자 하는 신호를 Wave 창으로 추가한 뒤, Simulate → Run을 실행하면 해당 신호의 Waveform을 확인할 수 있습니다.
-
-​
-
-
-​
+    이후 확인하고자 하는 신호를 Wave 창으로 추가한 뒤, Simulate → Run을 실행하면 해당 신호의 Waveform을 확인할 수 있습니다.
 
 7. 최종 Simulation 결과
 
- Simulation을 완료한 후 하단 Console 창을 확인하면, 
-
-실제 input data에 대한 연산 결과와 Expected 결과를 비교하는 과정을 확인할 수 있습니다.
-
-​
-
-두 결과가 일치하는 경우 이를 정상으로 판단하고, 전체 결과를 기반으로 Accuracy를 산출합니다.
-
-​
-
-본 Project에서는 전체 100개 sample 중 99개가 일치하여, 99%의 정확도를 보임을 확인하였습니다.
-
+    Simulation을 완료한 후 하단 Console 창을 확인하면, 실제 input data에 대한 연산 결과와 Expected 결과를 비교하는 과정을 확인할 수 있습니다.
+    두 결과가 일치하는 경우 이를 정상으로 판단하고, 전체 결과를 기반으로 Accuracy를 산출합니다.
+    본 Project에서는 전체 100개 sample 중 99개가 일치하여, 99%의 정확도를 보임을 확인하였습니다.
 
 etc. 추가적으로 확인해 볼 사항
 
@@ -191,22 +176,12 @@ etc. 추가적으로 확인해 볼 사항
 ​
 
 
-top_sim.v의 testbench는 MaxTestSamples 값을 기준으로 for-loop 형태로 동작하며,
+    top_sim.v의 testbench는 MaxTestSamples 값을 기준으로 for-loop 형태로 동작하며, 각 iteration마다 test data 파일명을 생성하여 처리를 시도합니다.
 
-각 iteration마다 test data 파일명을 생성하여 처리를 시도합니다.
-
-​
-
-이 과정에서 파일 존재 여부($fopen 성공 여부)를 별도로 확인하지 않기 때문에,
-
-test data 파일이 존재하지 않더라도 Simulation은 중단되지 않습니다.
-
-​
-
-그 결과 ModelSim 상에서는 별도의 Warning 없이 Simulation이 진행될 수 있습니다.
-
-​
-
+    이 과정에서 파일 존재 여부($fopen 성공 여부)를 별도로 확인하지 않기 때문에, test data 파일이 존재하지 않더라도 Simulation은 중단되지 않습니다.
+    
+    그 결과 ModelSim 상에서는 별도의 Warning 없이 Simulation이 진행될 수 있습니다.
+    
 2. Simulation 시, 발생하는 Warning
 
 
