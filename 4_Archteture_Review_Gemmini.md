@@ -22,39 +22,21 @@ Gemmini는 DNN accelerator를 독립적인 연산 블록으로 보지 않고, sy
 
 ### Architecture
 
-Gemmini는 RoCC (Rocket Custom Coprocessor) accelerator로 구현되며,
+Gemmini는 RoCC (Rocket Custom Coprocessor) accelerator로 구현되며, CPU가 실행하는 RISC-V custom instruction을 통해 직접 제어됩니다.
 
-CPU가 실행하는 RISC-V custom instruction을 통해 직접 제어됩니다.
+​해당 instruction은 표준 RISC-V ISA에 포함되지 않은 사용자 정의 명령으로, CPU 프로그램 흐름 내에서 Gemmini의 동작을 트리거하는 역할을 합니다.
 
-​
-
-해당 instruction은 표준 RISC-V ISA에 포함되지 않은 사용자 정의 명령으로, 
-
-CPU 프로그램 흐름 내에서 Gemmini의 동작을 트리거하는 역할을 합니다.
-
-​
-
-Gemmini는 Rocket Chip 또는 BOOM tile의 RoCC port에 연결되며, 이를 통해 CPU와 가속기 간 명령 및 상태 전달이 이루어집니다.
+​Gemmini는 Rocket Chip 또는 BOOM tile의 RoCC port에 연결되며, 이를 통해 CPU와 가속기 간 명령 및 상태 전달이 이루어집니다.
 
 또한 별도의 전용 메모리를 사용하지 않고, System Bus를 통해 CPU의 memory system에 접근하여 L2 cache와 연동됩니다.
 
-​
-
-즉, Gemmini는 독립적인 연산 IP가 아니라, CPU가 명령어로 제어하며 동일한 메모리 시스템을 공유하는 가속기로 설계되었습니다.
+​즉, Gemmini는 독립적인 연산 IP가 아니라, CPU가 명령어로 제어하며 동일한 메모리 시스템을 공유하는 가속기로 설계되었습니다.
 
 Accelerator의 핵심에는 matrix multiplication을 수행하는 systolic array가 위치합니다. 
 
-​
+​Gemmini는 기본적으로 output-stationary (OS)와 ​weight-stationary (WS) dataflow를 모두 지원하며, programmer는 이를 runtime에 선택하거나 elaboration time에 고정(hardening)하여 사용할 수 있습니다.
 
-Gemmini는 기본적으로 output-stationary (OS)와 ​weight-stationary (WS) dataflow를 모두 지원하며,
-
-programmer는 이를 runtime에 선택하거나 elaboration time에 고정(hardening)하여 사용할 수 있습니다.
-
-​
-
-Systolic array의 입력과 출력은 banked SRAM으로 구성된 scratchpad에 저장되며,
-
-host CPU가 접근하는 main memory와 scratchpad 간의 데이터 이동은 DMA engine이 담당합니다.
+​Systolic array의 입력과 출력은 banked SRAM으로 구성된 scratchpad에 저장되며, host CPU가 접근하는 main memory와 scratchpad 간의 데이터 이동은 DMA engine이 담당합니다.
 
 ** Banked SRAM은 하나의 큰 메모리를 사용하는 대신, SRAM을 여러 개의 독립적인 bank로 나누어 구성한 메모리 구조입니다.
 
