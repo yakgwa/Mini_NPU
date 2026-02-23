@@ -13,6 +13,7 @@ genTestData.py는 test data를 생성하는 스크립트이며, 해당 파일을
   outputPath = "../CNN-MNIST-Arty-Z7/CNN-MNIST-Arty-Z7.sim/sim_1/behav/xsim/"
   
   headerFilePath = "../CNN-MNIST-Arty-Z7/CNN-MNIST-Arty-Z7.sim/sim_1/behav/xsim/"
+  
 ​
 위 경로는 생성된 test_data.txt 및 관련 헤더 파일이 저장될 ModelSim(XSIM) 시뮬레이션 디렉터리를 지정합니다.
 
