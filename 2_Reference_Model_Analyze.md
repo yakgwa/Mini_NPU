@@ -445,7 +445,15 @@ Systolic Array의 개념과 연산 방식은 아래 링크와 뒤에 이어질 �
 ​### FC 구조와 Systolic Array 구조 비교
 
 이러한 특성 차이는 FC 구조와 Systolic Array 구조를 비교하면 보다 명확해집니다.
-​
+
+|구분|Fully Connected|Systolic Array|
+|------|---|---|
+|연산 차원|1-D (시간 축)|2-D (공간 + 시간)|
+|MAC 수행 방식|순차 수행|공간적 병렬 수행|
+|Weight 사용|반복 재사용 (시간적)|PE 내부 고정(preload)|
+|병렬성 활용|제한적|높음|
+|성능 확장성|입력 길이에 종속|Array 크기에 따라 확장|
+|PPA 관점|비효율적|상대적으로 효율적|​
 
 ### Systolic Array 도입 배경
 
