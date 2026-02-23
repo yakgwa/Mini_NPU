@@ -400,257 +400,132 @@ Google TPU의 systolic execution
 
 <div align="left">
 
-이 과정에서 각 PE는 서로 다른 시점의 연산 단계에 위치하게 되며, 연산의 시작과 종료 시점이 PE마다 자연스럽게 어긋나게 됩니다. 
+이 과정에서 각 PE는 서로 다른 시점의 연산 단계에 위치하게 되며, 연산의 시작과 종료 시점이 PE마다 자연스럽게 어긋나게 됩니다. 그 결과 별도의 복잡한 제어 없이도 control과 data가 자연스럽게 pipeline되며, pipeline이 충분히 채워진 이후에는 매 cycle마다 다수의 PE가 동시에 활성화됩니다.
 
-그 결과 별도의 복잡한 제어 없이도 control과 data가 자연스럽게 pipeline되며, 
+​논문에서 언급되는 *“256개의 input이 동시에 read되고, 256개의 accumulator가 즉시 update되는 것처럼 동작한다”*라는 표현은, 실제로 모든 입력이 한 번에 메모리에서 읽히거나 모든 accumulator가 동일한 시점에 갱신된다는 의미는 아닙니다. 
 
-pipeline이 충분히 채워진 이후에는 매 cycle마다 다수의 PE가 동시에 활성화됩니다.
+​이는 대규모 systolic array에서 여러 연산이 시간 축에서 overlap되어 실행되며 pipeline이 충분히 채워진 상태에서 Matrix Multiply Unit이 높은 utilization으로 지속적으로 동작하고 있음을 표현한 것입니다.
 
-​
-
-논문에서 언급되는 *“256개의 input이 동시에 read되고, 256개의 accumulator가 즉시 update되는 것처럼 동작한다”*라는 표현은, 
-
-실제로 모든 입력이 한 번에 메모리에서 읽히거나 모든 accumulator가 동일한 시점에 갱신된다는 의미는 아닙니다. 
-
-​
-
-이는 대규모 systolic array에서 여러 연산이 시간 축에서 overlap되어 실행되며
-
-pipeline이 충분히 채워진 상태에서 Matrix Multiply Unit이 높은 utilization으로 지속적으로 동작하고 있음을 표현한 것입니다.
-
-​
-
-즉, wavefront 기반 실행과 충분히 채워진 pipeline에 의해 
-
-Matrix Multiply Unit은 매 cycle마다 유효한 연산을 수행하며, 가능한 한 idle 없이 연속적으로 동작하도록 설계되었습니다. 
+​즉, wavefront 기반 실행과 충분히 채워진 pipeline에 의해 Matrix Multiply Unit은 매 cycle마다 유효한 연산을 수행하며, 가능한 한 idle 없이 연속적으로 동작하도록 설계되었습니다. 
 
 이는 Matrix Multiply Unit을 최대한 쉬지 않고 동작시키려는 TPU의 설계 목표가 실제 실행 단계에서 구현된 모습이라 볼 수 있습니다
 
-​
+​한편, 이러한 systolic execution은 software 입장에서는 연산 결과의 정확성만 보장되면 되며, 내부 아키텍처 구현 방식과는 직접적인 관련이 없습니다.
 
-한편, 이러한 systolic execution은 software 입장에서는 연산 결과의 정확성만 보장되면 되며, 
+​Software는 내부적으로 systolic array가 어떻게 구성되어 있는지, 또 어떤 dataflow가 사용되는지를 인지할 필요 없이 연산 결과의 정확성만을 보장하면 됩니다.
 
-내부 아키텍처 구현 방식과는 직접적인 관련이 없습니다.
+​반면, 성능(performance) 관점에서는 systolic execution의 특성이 매우 중요합니다. Matrix Unit의 실행 시간, 데이터 준비 시점, tile 전환 타이밍에 따라 Matrix Multiply Unit의 utilization이 결정되며, 이는 TPU 전체 성능에 직접적인 영향을 미칩니다. 
 
-​
+​즉, systolic execution은 software에 의해 직접 제어되거나 노출되지는 않지만, 데이터 이동과 연산의 overlap 정도(latency hiding)에 따라 실제 성능을 좌우하는 핵심 요인으로 작용합니다.
 
-Software는 내부적으로 systolic array가 어떻게 구성되어 있는지, 또 어떤 dataflow가 사용되는지를 인지할 필요 없이
-
-연산 결과의 정확성만을 보장하면 됩니다.
-
-​
-
-반면, 성능(performance) 관점에서는 systolic execution의 특성이 매우 중요합니다.
-
-​
-
-Matrix Unit의 실행 시간, 데이터 준비 시점, tile 전환 타이밍에 따라 Matrix Multiply Unit의 utilization이 결정되며, 
-
-이는 TPU 전체 성능에 직접적인 영향을 미칩니다. 
-
-​
-
-즉, systolic execution은 software에 의해 직접 제어되거나 노출되지는 않지만, 
-
-데이터 이동과 연산의 overlap 정도(latency hiding)에 따라 실제 성능을 좌우하는 핵심 요인으로 작용합니다.
-
-​
-
-2.8 Software Stack
+### 2.8 Software Stack
 
 TPU는 기존 CPU/GPU 환경에서 사용하던 소프트웨어를 큰 수정 없이 그대로 사용할 수 있도록 설계되었습니다.
 
-​
+​Application은 TensorFlow로 작성되며, 동일한 API를 통해 GPU 또는 TPU용으로 컴파일될 수 있어 기존 모델을 TPU로 쉽게 옮길 수 있습니다.
 
-Application은 TensorFlow로 작성되며, 
+​TPU 소프트웨어는 크게 Kernel Driver와 User Space Driver로 나뉩니다.Kernel Driver는 메모리 관리와 interrupt 처리 등 필수적인 기능만 담당하는 얇은 계층으로, 안정성을 우선합니다.
 
-동일한 API를 통해 GPU 또는 TPU용으로 컴파일될 수 있어 기존 모델을 TPU로 쉽게 옮길 수 있습니다.
-
-​
-
-TPU 소프트웨어는 크게 Kernel Driver와 User Space Driver로 나뉩니다.
-
-Kernel Driver는 메모리 관리와 interrupt 처리 등 필수적인 기능만 담당하는 얇은 계층으로, 안정성을 우선합니다.
-
-​
-
-반면 User Space Driver는 TPU 실행을 실제로 준비하고 제어하는 계층으로,
-
-연산 설정, 데이터 형태 변환, 그리고 고수준 API를 TPU가 이해할 수 있는 명령어로 변환·컴파일하는 역할을 수행합니다.
-
-​
+​반면 User Space Driver는 TPU 실행을 실제로 준비하고 제어하는 계층으로, 연산 설정, 데이터 형태 변환, 그리고 고수준 API를 TPU가 이해할 수 있는 명령어로 변환·컴파일하는 역할을 수행합니다.
 
 이 때문에 User Space Driver는 단순한 드라이버라기보다는 TPU 전용 컴파일러와 실행 환경에 가깝습니다.
 
-​
+​TPU 프로그램은 처음 실행될 때 모델 컴파일과 weight 로딩이 한 번 수행되며, 이 결과는 캐시되어 이후 동일한 모델을 실행할 때는 별도의 준비 과정 없이 곧바로 최대 성능으로 실행됩니다.
 
-TPU 프로그램은 처음 실행될 때 모델 컴파일과 weight 로딩이 한 번 수행되며,
+​또한 TPU는 입력부터 출력까지의 전체 연산을 가능한 한 chip 내부에서 끝내도록 설계되어, 외부와의 데이터 전송(PCIe I/O)을 최소화하고 실제 연산에 사용하는 시간 비율을 최대화합니다. 
 
-이 결과는 캐시되어 이후 동일한 모델을 실행할 때는 별도의 준비 과정 없이 곧바로 최대 성능으로 실행됩니다.
-
-​
-
-또한 TPU는 입력부터 출력까지의 전체 연산을 가능한 한 chip 내부에서 끝내도록 설계되어,
-
-외부와의 데이터 전송(PCIe I/O)을 최소화하고 실제 연산에 사용하는 시간 비율을 최대화합니다. 
-
-​
-
-실제 연산은 주로 layer 단위로 수행되며, instruction 및 연산의 overlapped execution을 통해
-
-Matrix Multiply Unit이 non-critical-path 작업으로 인해 idle 상태에 빠지는 것을 최대한 방지합니다.
-
-→ 이로 인해 TPU는 개발자에게는 GPU와 유사한 가속기로 보이지만, 
-
-실제로는 OS가 직접 세밀하게 제어하는 범용 프로세서가 아닌, 
-
-실행 전 연산 순서와 데이터 흐름이 대부분 결정되는 연산 중심의 coprocessor로 동작합니다.
-
-​
+​실제 연산은 주로 layer 단위로 수행되며, instruction 및 연산의 overlapped execution을 통해 Matrix Multiply Unit이 non-critical-path 작업으로 인해 idle 상태에 빠지는 것을 최대한 방지합니다.
+→ 이로 인해 TPU는 개발자에게는 GPU와 유사한 가속기로 보이지만, 실제로는 OS가 직접 세밀하게 제어하는 범용 프로세서가 아닌, 실행 전 연산 순서와 데이터 흐름이 대부분 결정되는 연산 중심의 coprocessor로 동작합니다.
 
 Software는 correctness만을 보장하면 되며, 실제 성능은 컴파일 단계에서 결정된 실행 스케줄과 데이터 이동에 의해 좌우됩니다.
 
-+ 추가 (26.01.06.)
-
-스터디를 진행하며 생긴 추가 질문들은 아래에 정리하였습니다.
-
-​
-
-질문사항
+### 질문사항
 
 1. HW설계 관점에서 floating point vs fixed point 차이는?
 
-→ 
+→ Floating-point arithmetic는 넓은 dynamic range와 높은 numerical stability를 제공하지만, 
 
-Floating-point arithmetic는 넓은 dynamic range와 높은 numerical stability를 제공하지만, 
+hardware implementation cost가 큽니다. Exponent alignment, mantissa normalization, rounding과 같은 추가적인 logic이 필요하므로, 
 
-hardware implementation cost가 큽니다. 
+area, power, 그리고 critical path latency가 증가합니다. 이러한 특성으로 인해 floating-point 연산은 주로 training phase에서 사용됩니다.
 
-​
+​반면 fixed-point (integer) arithmetic는 표현 가능한 dynamic range는 제한적이지만, multiplier와 adder 중심의 단순한 datapath로 구현할 수 있어 Power, Performance, Area(PPA) 측면에서 매우 효율적입니다. 
 
-Exponent alignment, mantissa normalization, rounding과 같은 추가적인 logic이 필요하므로, 
+​이미 학습된 weight를 사용하는 inference phase에서는 quantization을 적용하더라도 충분한 accuracy를 유지하는 경우가 많아, fixed-point 연산이 널리 사용됩니다.
 
-area, power, 그리고 critical path latency가 증가합니다. 
+​2. Double Buffering 이란?
 
-이러한 특성으로 인해 floating-point 연산은 주로 training phase에서 사용됩니다.
+→ Double Buffering은 computation과 data transfer를 overlap하여 memory access latency를 숨기기 위한 기법입니다. 
 
-​
+​하나의 buffer에서 computation이 수행되는 동안, 다른 buffer에서는 subsequent tile, activation, 또는 weight data를 미리 load(prefetch)합니다. 
 
-반면 fixed-point (integer) arithmetic는 표현 가능한 dynamic range는 제한적이지만, 
+​이를 통해 computation이 data fetch 완료를 기다리며 stall되는 상황을 방지할 수 있습니다.
 
-multiplier와 adder 중심의 단순한 datapath로 구현할 수 있어 Power, Performance, Area(PPA) 측면에서 매우 효율적입니다. 
+​TPU에서는 weight tile buffer, Unified Buffer(UB), accumulator memory 등 multiple memory hierarchy levels에서 double buffering이 적용되어, Matrix Multiply Unit(MMU)이 data starvation으로 인해 idle 상태에 빠지는 것을 최소화하도록 설계되었습니다. 
 
-​
+​이러한 구조는 computation throughput을 안정적으로 유지하고, overall utilization을 극대화하는 데 기여합니다.
 
-이미 학습된 weight를 사용하는 inference phase에서는 quantization을 적용하더라도 충분한 accuracy를 유지하는 경우가 많아, fixed-point 연산이 널리 사용됩니다.
+​관련자료: https://blog.naver.com/bbineekim/222873251460
 
-​
+​3. Systolic Array의 장점은? Systolic Array를 사용하지 않는다면 어떤 식으로 구현되나?
 
-2. Double Buffering 이란?
-
-→ 
-
-Double Buffering은 computation과 data transfer를 overlap하여 memory access latency를 숨기기 위한 기법입니다. 
-
-​
-
-하나의 buffer에서 computation이 수행되는 동안, 
-
-다른 buffer에서는 subsequent tile, activation, 또는 weight data를 미리 load(prefetch)합니다. 
-
-​
-
-이를 통해 computation이 data fetch 완료를 기다리며 stall되는 상황을 방지할 수 있습니다.
-
-​
-
-TPU에서는 weight tile buffer, Unified Buffer(UB), accumulator memory 등 multiple memory hierarchy levels에서 double buffering이 적용되어, 
-
-Matrix Multiply Unit(MMU)이 data starvation으로 인해 idle 상태에 빠지는 것을 최소화하도록 설계되었습니다. 
-
-​
-
-이러한 구조는 computation throughput을 안정적으로 유지하고, overall utilization을 극대화하는 데 기여합니다.
-
-​
-
-관련자료: https://blog.naver.com/bbineekim/222873251460
-
-​
-
-3. Systolic Array의 장점은? Systolic Array를 사용하지 않는다면 어떤 식으로 구현되나?
-
-→ 
-
-Systolic Array의 가장 큰 장점은 
-
-data movement를 구조적으로 최소화하면서 compute unit utilization을 지속적으로 유지할 수 있다는 점입니다. 
-
-​
+→ Systolic Array의 가장 큰 장점은 data movement를 구조적으로 최소화하면서 compute unit utilization을 지속적으로 유지할 수 있다는 점입니다. 
 
 Activation과 weight는 Processing Element(PE) 간에 local forwarding 방식으로 전달되며 반복적으로 data reuse가 이루어지고, partial sum은 array 내부에서 in-place accumulation됩니다. 
 
-​
-
-이로 인해 연산 과정에서 DRAM이나 상위 memory hierarchy에 대한 접근이 크게 감소하며, 
-
-compute unit은 data starvation 없이 continuous execution이 가능합니다. 
-
-​
+​이로 인해 연산 과정에서 DRAM이나 상위 memory hierarchy에 대한 접근이 크게 감소하며, compute unit은 data starvation 없이 continuous execution이 가능합니다. 
 
 이러한 특성은 matrix multiplication과 같이 MAC operation이 대량으로 반복되는 workload에서 높은 energy efficiency와 안정적인 throughput을 제공하는 데 특히 효과적입니다.
 
-​
+​반면 systolic array를 사용하지 않는 경우에는, centralized register file이나 shared memory에서 데이터를 읽어 각 compute unit으로 분배하는 구조, 혹은 GPU와 같이 scheduler-driven execution model을 사용하는 방식으로 구현됩니다.
 
-반면 systolic array를 사용하지 않는 경우에는, 
+​이러한 구조는 execution flexibility는 높지만, 연산마다 데이터가 memory hierarchy를 반복적으로 이동해야 하며, 이를 관리하기 위한 dynamic scheduling과 control logic overhead가 필수적으로 수반됩니다. 
 
-centralized register file이나 shared memory에서 데이터를 읽어 각 compute unit으로 분배하는 구조, 혹은 GPU와 같이 
+​그 결과 data movement overhead와 control complexity가 증가하고, 동일한 성능을 달성하기 위해 더 많은 power and area cost가 요구되는 경우가 많습니다.
 
-scheduler-driven execution model을 사용하는 방식으로 구현됩니다.
+​4. MLP에서 Hidden Layer와 weight 갯수는 어떻게 정하는가?
 
-​
-
-이러한 구조는 execution flexibility는 높지만, 연산마다 데이터가 memory hierarchy를 반복적으로 이동해야 하며, 
-
-이를 관리하기 위한 dynamic scheduling과 control logic overhead가 필수적으로 수반됩니다. 
-
-​
-
-그 결과 data movement overhead와 control complexity가 증가하고, 
-
-동일한 성능을 달성하기 위해 더 많은 power and area cost가 요구되는 경우가 많습니다.
-
-​
-
-4. MLP에서 Hidden Layer와 weight 갯수는 어떻게 정하는가?
-
-→ 댓글 참고.
-
-​
+→ 원칙적으로는 hidden layer가 1개이더라도 neuron 수가 충분하다면, 입력과 출력 사이의 관계를 표현하는 것은 가능합니다.
+다만 hidden layer가 1개인 경우, 복잡한 패턴을 표현하기 위해 필요한 neuron 수가 지나치게 커지게 되고, 그 결과 parameter 증가, power consumption 증가, 그리고 training이 비효율적이라는 문제가 발생합니다.
+이 때문에 실제로는 hidden layer를 1~3개 정도로 설정하고, 문제의 난이도나 데이터 특성에 따라 그 개수를 조절하는 방식이 일반적으로 사용된다고 합니다.
+일반적으로 hidden layer를 2개 사용하는 경우가 많은데, 이는 입력과 출력 사이의 관계가 하나의 linear boundary로는 잘 설명되지 않는 경우를 다루기 위해서입니다.
+조금 더 구체적으로 보면, 첫 번째 hidden layer에서는 입력 데이터를 변환해 단순한 pattern이나 low-level feature를 만들고, 두 번째 hidden layer에서는 이 결과들을 조합해 더 복잡한 decision boundary를 표현할 수 있는 high-level feature를 형성합니다.Hidden layer의 개수가 3개 이상으로 늘어나면,
+표현력은 더 좋아질 수 있지만, 그에 비해 training complexity 증가, convergence가 불안정해지는 문제, overfitting risk 등이 함께 커지는 경우가 많습니다.
+결국 hidden layer의 개수는 데이터 값의 크기나 변동폭보다는, 입력과 출력 사이의 관계가 linear boundary로 구분 가능한지, 여러 단계의 non-linear transformation이 필요한 구조인지를 기준으로 결정됩니다.
 
 5. AI동작은 Training, Inference 로 구분되는데, 둘다 HW로 만드는건지?
 
-→ 댓글 참고.
+→ AI 동작은 training과 inference로 나뉘지만, 일반적으로 두 단계가 모두 hardware에서 수행되지는 않습니다.
 
-이번 글에서는 Google의 TPU 논문
+보통 training은 유연성이 중요한 작업이기 때문에 software 환경에서 수행되고, inference는 반복적인 연산 위주이므로 hardware accelerator에서 수행되는 경우가 많습니다.
 
-In-Datacenter Performance Analysis of a Tensor Processing Unit
+Training은 단순히 결과를 계산하는 단계가 아니라, 입력을 넣어 결과를 계산하는 forward pass 이후, 출력을 정답과 비교해 오차의 원인을 거슬러 추적하는 backward pass를 통해 gradient를 계산하고, 이를 기반으로 weight를 update하는 과정까지 포함합니다.
 
-을 바탕으로 분석을 진행했습니다.
+이 과정에서는 optimizer, loss function, training technique 등이 자주 변경되며, 그에 따라 operation type과 control flow도 함께 복잡해집니다.
 
-​
+따라서 구조를 유연하게 수정하고 디버깅할 수 있는 software 기반 execution이 현실적으로 가장 효율적이며, 실제로는 GPU와 deep learning framework를 이용해 training을 수행하는 경우가 대부분입니다.
+
+반면 inference는 이미 학습된 weight를 고정한 상태에서 forward pass만 수행해 결과를 생성하는 단계입니다. 연산 패턴이 비교적 일정하고 MAC 중심의 계산이 반복되기 때문에, 특정 dataflow에 맞춰 최적화된 hardware accelerator에서 처리하는 것이 성능과 전력 효율 측면에서 유리합니다.
+
+이러한 이유로 mobile, embedded, server inference 환경에서는 inference를 hardware로 처리하는 구조가 일반적으로 사용됩니다.
+
+일부 GPU는 training과 inference를 모두 수행하지만, 전용 accelerator는 일반적으로 inference를 대상으로 사용됩니다.
+
++ 추가내용
+추가로, TPU 세대별 역할을 구분하면 이해가 더 명확해집니다.
+
+TPU v1은 데이터센터 추론(inference) 가속을 우선 목표로 설계된 ASIC이며, Google은 당시 학습(training)은 상용 GPU를 활용하는 전략을 취했습니다.
+
+반면 TPU v2/v3는 대규모 DNN 학습을 주요 타깃으로 확장된 세대로, Google은 TPU v2 아키텍처를 “training을 위한 domain-specific supercomputer”로 별도 정리하고 있습니다.
+
+즉, TPU는 초기에는 inference 중심으로 출발했지만, 이후 세대에서는 training과 inference를 모두 커버하는 방향으로 진화했으며,
+현재 Cloud TPU 역시 두 워크로드 모두를 대상으로 최적화된 가속기라는 점을 전제로 설명됩니다.
+
+### In-Datacenter Performance Analysis of a Tensor Processing Unit을 바탕으로 분석을 진행했습니다.
 
 CPU·GPU·TPU의 실제 시뮬레이션 결과에 대한 내용은 본문에서 다루지 않았으며,
 
 해당 내용은 논문의 Section 3 이후에서 확인할 수 있습니다.
-
-​
-
-자세한 분석은 기회가 된다면 추후 별도의 글로 다룰 예정입니다.
-
-​
-
-CPU·GPU·TPU 시뮬레이션 비교 분석: (추후 작성 예정)​
 
 추가로, PPT 자료가 필요하신 경우 아래 링크를 참고하시면 됩니다.
 
@@ -658,58 +533,6 @@ https://courses.grainger.illinois.edu/cs533/sp2025/notes/tpu_arch.pdf
 
 다음 글에서는 아래 두 가지 방향 중 하나로 내용을 이어갈 예정입니다.
 
-Gemmini 논문을 분석하여 systolic array 구조를 보다 자세히 살펴보는 방향
+|1. Gemmini 논문을 분석하여 systolic array 구조를 보다 자세히 살펴보는 방향|
 
-해당 논문을 참고해 실제 PE Block을 구현해보는 방향
-
-### 화면 구성
-|화면 명|
-|:---:|
-|<img src="https://user-images.githubusercontent.com/80824750/208456048-acbf44a8-cd71-4132-b35a-500047adbe1c.gif" width="450"/>|
-|화면에 대한 설명을 입력합니다.|
-
-
-|화면 명|
-|:---:|
-|<img src="https://user-images.githubusercontent.com/80824750/208456234-fb5fe434-aa65-4d7a-b955-89098d5bbe0b.gif" width="450"/>|
-|화면에 대한 설명을 입력합니다.|
-
-<br />
-
-## ⚙ 기술 스택
-> skills 폴더에 있는 아이콘을 이용할 수 있습니다.
-### Front-end
-<div>
-<img src="https://github.com/yewon-Noh/readme-template/blob/main/skills/JavaScript.png?raw=true" width="80">
-<img src="https://github.com/yewon-Noh/readme-template/blob/main/skills/React.png?raw=true" width="80">
-<img src="https://github.com/yewon-Noh/readme-template/blob/main/skills/JWT.png?raw=true" width="80">
-</div>
-
-### Infra
-<div>
-<img src="https://github.com/yewon-Noh/readme-template/blob/main/skills/AWSEC2.png?raw=true" width="80">
-</div>
-
-### Tools
-<div>
-<img src="https://github.com/yewon-Noh/readme-template/blob/main/skills/Github.png?raw=true" width="80">
-<img src="https://github.com/yewon-Noh/readme-template/blob/main/skills/Notion.png?raw=true" width="80">
-</div>
-
-<br />
-
-## 🤔 기술적 이슈와 해결 과정
-- CORS 이슈
-    - [Axios message: 'Network Error'(CORS 오류)](https://leeseong010.tistory.com/117)
-- api 호출 시 중복되는 헤더 작업 간소화하기
-    - [axios interceptor 적용하기](https://leeseong010.tistory.com/133)
-- axios 요청하기
-    - [axios delete 요청 시 body에 data 넣는 방법](https://leeseong010.tistory.com/111)
-
-<br />
-
-## 💁‍♂️ 프로젝트 팀원
-|Backend|Frontend|
-|:---:|:---:|
-| ![](https://github.com/yewon-Noh.png?size=120) | ![](https://github.com/SeongHo-C.png?size=120) |
-|[노예원](https://github.com/yewon-Noh)|[이성호](https://github.com/SeongHo-C)|
+|2. 해당 논문을 참고해 실제 PE Block을 구현해보는 방향|
