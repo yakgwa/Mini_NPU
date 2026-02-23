@@ -6,7 +6,9 @@ MNIST Data Set을 입력으로 받아 숫자(0~9)를 분류하는 Neural Network
 
 MNIST 손글씨 Dataset​
 
-<div align="left"> - GitHub (Reference Code)
+<div align="left"> 
+    
+- GitHub (Reference Code)
 
     https://github.com/yeshvanth-m/CNN-Handwritten-Digit-MNIST
 
