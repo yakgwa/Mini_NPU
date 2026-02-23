@@ -40,57 +40,31 @@ Accelerator의 핵심에는 matrix multiplication을 수행하는 systolic array
 
 * Banked SRAM은 하나의 큰 메모리를 사용하는 대신, SRAM을 여러 개의 독립적인 bank로 나누어 구성한 메모리 구조입니다.
 
-* DMA (Direct Memory Access) engine은 CPU 개입 없이 메모리 간 데이터 이동을 전담하는 하드웨어 블록입니다.
+* DMA (Direct Memory Access) engine은 CPU 개입 없이 메모리 간 데이터 이동을 전담하는 하드웨어 블록입니다.​
 
-​
-
-Weight-stationary dataflow에서는 systolic array 외부에 accumulator가 필요하므로, 
-
-adder units가 포함된 additional SRAM bank가 추가됩니다. 
-
-​
+Weight-stationary dataflow에서는 systolic array 외부에 accumulator가 필요하므로, adder units가 포함된 additional SRAM bank가 추가됩니다. 
 
 systolic array는 accumulator의 임의 주소로 결과를 저장하거나 새로운 input을 읽을 수 있습니다. 
 
-​
+​또한 해당 accumulator SRAM은 scratchpad와 유사하게 사용되며, bias 로딩 등을 위해 main memory와 DMA를 통한 직접 데이터 전송을 지원합니다.
 
-또한 해당 accumulator SRAM은 scratchpad와 유사하게 사용되며, 
+​마지막으로 Gemmini는 다음을 포함합니다.
 
-bias 로딩 등을 위해 main memory와 DMA를 통한 직접 데이터 전송을 지원합니다.
+* activation function(ReLU, ReLU6) 적용
 
-​
+* power-of-2 scaling을 통한 quantized workload 지원
 
-마지막으로 Gemmini는 다음을 포함합니다.
+→ 정수 기반 연산에서 스케일링을 곱셈이 아닌 bit shift 연산으로 처리할 수 있도록 지원하여, quantized DNN 연산을 효율적으로 수행합니다.
 
-activation function(ReLU, ReLU6) 적용
+* output-stationary dataflow를 위한 matrix transpose 기능을 수행하는 peripheral circuitry
 
-power-of-2 scaling을 통한 quantized workload 지원
+→ output-stationary dataflow에서 요구되는 데이터 배치를 맞추기 위해, 행렬을 전치(transpose)하는 전용 주변 회로를 포함하여 systolic array 입력 형태를 하드웨어에서 직접 변환합니다.
 
-→ 
-
-정수 기반 연산에서 스케일링을 곱셈이 아닌 bit shift 연산으로 처리할 수 있도록 지원하여, 
-
-quantized DNN 연산을 효율적으로 수행합니다.
-
-output-stationary dataflow를 위한 matrix transpose 기능을 수행하는 peripheral circuitry
-
-→ 
-
-output-stationary dataflow에서 요구되는 데이터 배치를 맞추기 위해, 
-
-행렬을 전치(transpose)하는 전용 주변 회로를 포함하여 systolic array 입력 형태를 하드웨어에서 직접 변환합니다.
-
-​
-
-​
-
-Generator Parameters
+### Generator Parameters
 
 Gemmini에서 중요하게 고려되는 주요 parameters는 다음과 같습니다.
 
-​
-
-Systolic array dimensions (tileRows, tileColumns, meshRows, meshColumns)
+<mark>Systolic array dimensions (tileRows, tileColumns, meshRows, meshColumns)</mark>
 
 Systolic array는 2-level hierarchy로 구성됩니다. 
 
