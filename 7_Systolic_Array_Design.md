@@ -587,13 +587,14 @@ unsigned 연산 결과
 - NUM_PE : 1-D PE chain 구성부터는 NUM_PE 파라미터가 추가됩니다. NUM_PE는 Chain에 포함되는 PE의 개수를 의미합니다. 이후 generate 문 내부의 for 문을 통해 NUM_PE 값만큼 PE instance를 복제하여 1-D 구조를 구성합니다.
 - data_pipe : data_pipe[0:NUM_PE-1]는 입력 in_data를 clock 단위로 한 stage씩 delay시키기 위한 pipeline register 배열입니다. en=1일 때만 pipeline이 동작하며, 매 clock마다 data_pipe[0]에는 새로운 입력이 저장되고, data_pipe[i]에는 이전 stage의 값(data_pipe[i-1])이 전달됩니다. en=0이면 모든 stage는 현재 값을 유지하여 데이터 이동이 정지됩니다. 이 구조로 인해 동일한 input stream이 시간차를 두고 각 PE에 도달하며, data_pipe[i]가 mac_pe의 입력 a에 연결되어 각 PE는 서로 다른 시점의 입력 데이터를 처리하게 됩니다.
 
-<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_70.png" width="200"/>
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_70.png" width="400"/>
 
 <div align="left">
 
+## Error / Warning 분석
+        WARNING: [XSIM 43-4099] "C:/Users/mini9/Desktop/NPU/OS/PE/mac_pe.sv" Line 1. Module mac_pe(ACC_W=16) doesn't have a timescale but at least one module in design has a timescale.
 
-
-
+해당 Warning은 아래 구문이 TB에는 timescale이 정의되어 있으나, DUT 모듈에는 존재하지 않아 XSIM이 시간 단위가 일치하지 않음을 경고하는 메시지입니다. 동작상에는 큰 문제는 없으나, 추후 timing control(#delay 등)이 추가될 경우를 고려하여, 모듈 간 시간 단위 해석 차이를 방지하기 위해 timescale을 통일하는 것이 바람직합니다.
 
 
 
