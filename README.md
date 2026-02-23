@@ -102,9 +102,7 @@ Inference: Training을 통해 이미 학습된 weight를 그대로 사용하여,
 현재 데이터센터 추론 환경에서 널리 사용되는 신경망은 크게 세 가지 유형으로 나눌 수 있습니다.
 
 - MLP (Multi-Layer Perceptron: 각 layer가 이전 layer의 모든 출력과 fully connected로 연결되는 구조
-
 - CNN (Convolutional Neural Network): 공간적으로 인접한 입력에 대해 동일한 weight를 반복 적용하는 구조
-
 - RNN / LSTM (Recurrent Neural Network): 이전에 처리한 정보를 기억하면서, 시간 순서대로 데이터를 하나씩 처리하는 구조
 
 <div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_4.png" width="400"/>
@@ -175,127 +173,70 @@ TPU는 deployment 지연 가능성 최소화를 위해, CPU와 tightly integrate
 
 <div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_7.png" width="400"/>
 
-​
+TPU Block Diagram
 
-<div align="left">TPU Block Diagram
-
-​
-
-TPU instruction은 PCIe Gen3 x16 bus를 통해 host에서 instruction buffer로 전달되며, 
-
-내부 block들은 일반적으로 256-byte-wide data path로 연결되어 있습니다.
-
+​<div align="left">TPU instruction은 PCIe Gen3 x16 bus를 통해 host에서 instruction buffer로 전달되며, 내부 block들은 일반적으로 256-byte-wide data path로 연결되어 있습니다.
 → TPU를 제어하는 host(일반적으로 CPU)가 수행할 연산과 데이터 이동에 대한 지시사항(Instruction)을 생성해 TPU로 전달합니다.
 
-이때 host와 TPU는 표준 interface인 PCIe Gen3 x16을 통해 연결되며, 
-
-전달된 instruction은 TPU 내부의 instruction buffer (그림의 Instr Block)에 저장된 뒤 순차적으로 해석·실행됩니다.
-
-​
-
+이때 host와 TPU는 표준 interface인 PCIe Gen3 x16을 통해 연결되며, 전달된 instruction은 TPU 내부의 instruction buffer (그림의 Instr Block)에 저장된 뒤 순차적으로 해석·실행됩니다.
 → 대규모 행렬 곱 연산 시 연속적인 데이터 공급과 peak utilization(연산 유닛이 매 cycle마다 쉬지 않고 동작)을 유지하기 위해,
 
-내부 block 간을 매우 넓은 data path로 연결하는 구조를 채택했습니다.
+내부 block 간을 매우 넓은 data path로 연결하는 구조를 채택했습니다. TPU 구조의 중심에는 Matrix Multiply Unit이 위치합니다.
 
-​
+이 unit은 256×256 MAC array 로 구성되어 있으며, signed 또는 unsigned 8-bit integer multiply & add 연산을 수행합니다.
 
-TPU 구조의 중심에는 Matrix Multiply Unit이 위치합니다.
-
-이 unit은 256×256 MAC array 로 구성되어 있으며,  signed 또는 unsigned 8-bit integer multiply & add 연산을 수행합니다.
-
-​
-
-연산 결과인 16-bit product는 matrix unit 아래에 위치한 4 MiB 크기의 32-bit Accumulator에 누적됩니다.
+​연산 결과인 16-bit product는 matrix unit 아래에 위치한 4 MiB 크기의 32-bit Accumulator에 누적됩니다.
 
 이 accumulator 메모리는 4096개의 256-element accumulator를 저장할 수 있도록 구성되어 있습니다.
 
-※ 4096은 roofline model에서 도출된 knee point(약 1350 operations/byte)를 기준으로 최소 요구치를 2048로 올림한 뒤, 
-
-컴파일러가 peak performance 상태에서도 double buffering을 활용할 수 있도록 이를 다시 두 배로 확장해 결정되었습니다.
-
+※ 4096은 roofline model에서 도출된 knee point(약 1350 operations/byte)를 기준으로 최소 요구치를 2048로 올림한 뒤, 컴파일러가 peak performance 상태에서도 double buffering을 활용할 수 있도록 이를 다시 두 배로 확장해 결정되었습니다.
  →8-bit activation과 8-bit weight의 곱셈 결과는 최대 16-bit로 생성되며,
 
 행렬 곱 과정에서 생성되는 partial sum은 여러 차례 누적되며, 이러한 최종 누적 결과는 32-bit Accumulator에 저장됩니다.
-
-​
-
- → Matrix Multiply Unit은 한 cycle에 256개의 출력 값을 한 묶음(256-element row)으로 생성해 Accumulator로 전달하며,
+→ Matrix Multiply Unit은 한 cycle에 256개의 출력 값을 한 묶음(256-element row)으로 생성해 Accumulator로 전달하며,
 
 Accumulator 메모리는 이러한 256-element row를 여러 개 (4096개) 동시에 누적·보관할 수 있도록 구성되어 있습니다.
 
-​
+### 2.4 Matrix Multiply Unit의 동작 특성
 
-2.4 Matrix Multiply Unit의 동작 특성
+Matrix Multiply Unit은 clock cycle당 하나의 256-element partial sum을 생성합니다. 연산에 사용되는 bit width에 따라 처리 속도는 다음과 같이 달라집니다.
 
-Matrix Multiply Unit은 clock cycle당 하나의 256-element partial sum을 생성합니다.
+- 8-bit weight + 8-bit activation → full speed
+- 8-bit / 16-bit 혼용 → half speed
+- 16-bit / 16-bit → quarter speed
+→ bit width가 증가할수록 하나의 MAC 연산이 더 많은 하드웨어 자원을 점유하게 되며, 그 결과 동일한 하드웨어에서 처리 가능한 연산 throughput이 감소합니다.
 
-연산에 사용되는 bit width에 따라 처리 속도는 다음과 같이 달라집니다.
-
-8-bit weight + 8-bit activation → full speed
-
-8-bit / 16-bit 혼용 → half speed
-
-16-bit / 16-bit → quarter speed
-
-→ bit width가 증가할수록 하나의 MAC 연산이 더 많은 하드웨어 자원을 점유하게 되며,
-
-그 결과 동일한 하드웨어에서 처리 가능한 연산 throughput이 감소합니다.
-
-
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_8.png" width="400"/>
 Matrix Unit (Systolic array) 예시
 
-Matrix Unit은 cycle당 256개의 value를 read/write할 수 있으며, matrix multiplication과 convolution을 모두 수행할 수 있습니다.
+<div align="left">Matrix Unit은 cycle당 256개의 value를 read/write할 수 있으며, matrix multiplication과 convolution을 모두 수행할 수 있습니다.
 
 이 unit은 64 KiB 크기의 weight tile과, tile 전환 시의 지연을 숨기기 위한 double buffering용 tile을 함께 보유합니다.
 
 이는 새로운 tile을 로드하는 데 필요한 256 cycle의 latency를 연산과 겹쳐 숨기기 위한 설계입니다.
 
-→ 
+→ tile이란 Matrix Unit이 한 번에 처리하도록 chip 내에 고정해 두는 weight의 작업 단위를 의미합니다. 전체 weight를 모두 chip 내부에 저장하기에는 용량 제약이 있으므로, TPU는 계산에 필요한 weight만을 tile 단위로 분할해 순차적으로 로드합니다.
 
-tile이란 Matrix Unit이 한 번에 처리하도록 chip 내에 고정해 두는 weight의 작업 단위를 의미합니다.
+이때 double buffering을 적용해, 하나의 tile로 연산을 수행하는 동안 다음 tile을 미리 로드함으로써 tile 교체 과정에서 발생하는 256 cycle의 지연을 연산과 겹쳐 숨길 수 있도록 설계되었습니다.
 
-전체 weight를 모두 chip 내부에 저장하기에는 용량 제약이 있으므로, 
+​TPU는 대부분의 값이 실제 연산에 사용되는 dense 행렬(대부분의 원소가 0이 아닌 행렬)을 대상으로 설계되었으며, chip을 빠르게 개발하고 성능을 안정적으로 확보하기 위해 sparse 연산 지원은 의도적으로 제외되었습니다.
 
-TPU는 계산에 필요한 weight만을 tile 단위로 분할해 순차적으로 로드합니다.
-
-​
-
-이때 double buffering을 적용해, 하나의 tile로 연산을 수행하는 동안 다음 tile을 미리 로드함으로써
-
-tile 교체 과정에서 발생하는 256 cycle의 지연을 연산과 겹쳐 숨길 수 있도록 설계되었습니다.
-
-​
-
-TPU는 대부분의 값이 실제 연산에 사용되는 dense 행렬(대부분의 원소가 0이 아닌 행렬)을 대상으로 설계되었으며,
-
-chip을 빠르게 개발하고 성능을 안정적으로 확보하기 위해 sparse 연산 지원은 의도적으로 제외되었습니다.
-
-​
-
-Weight는 Chip 내부 Weight FIFO를 통해 공급되며, 
-
-이 FIFO는 Chip 외부에 위치한 8 GiB DRAM 기반 Weight Memory에서 데이터를 읽어옵니다.
-
+​Weight는 Chip 내부 Weight FIFO를 통해 공급되며, 이 FIFO는 Chip 외부에 위치한 8 GiB DRAM 기반 Weight Memory에서 데이터를 읽어옵니다.
 → off-chip DRAM(그림 내 DDR3 DRAM Block) 접근 시 발생하는 수백~수천 cycle의 지연을 피하기 위해,
 
 weight를 미리 FIFO에 적재함으로써 Matrix Unit에 연속적인 데이터 공급이 가능하도록 설계되었습니다.
 
-​
-
-Inference 단계에서 weight는 read-only이며, 이 용량은 여러 model을 동시에 활성화하기에 충분합니다.
-
-→ training 단계에서 이미 결정된 weight를 사용하므로 inference 과정에서는 값이 변경되지 않습니다.
-
-→→따라서 하드웨어 설계에서는 weight memory를 read-only로 가정하고 최적화할 수 있습니다.
+​Inference 단계에서 weight는 read-only이며, 이 용량은 여러 model을 동시에 활성화하기에 충분합니다.
+→ training 단계에서 이미 결정된 weight를 사용하므로 inference 과정에서는 값이 변경되지 않습니다. →따라서 하드웨어 설계에서는 weight memory를 read-only로 가정하고 최적화할 수 있습니다.
 
 ​
 
-2.5 Unified Buffer와 데이터 이동
+### 2.5 Unified Buffer와 데이터 이동
 
-
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_9.png" width="400"/>
 TPU Floorplan
 
-Matrix Unit의 입력과 중간 결과는 24 MiB 크기의 chip 내부 Unified Buffer에 저장되며,
+<div align="left">Matrix Unit의 입력과 중간 결과는 24 MiB 크기의 chip 내부 Unified Buffer에 저장되며,
 
 이 buffer는 Matrix Unit의 입력으로 직접 사용될 수 있습니다.\
 
