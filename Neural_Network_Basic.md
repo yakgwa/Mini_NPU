@@ -90,7 +90,7 @@ Systolic Array는 다수의 Processing Element (PE)를 2D array 형태로 배치
 
 |Level of Abstraction|개념|역할 / 의미|
 |------|---|---|
-|Model / Algorithm Level||DNN / MLP / CNN / RNN||Neural Network의 구조와 구성 방식을 정의하는 architecture 개념|
-|Mathematical / Operation Level||MatMul||Neural Network 내부 계산을 표현하는 가장 기본적인 수학적 연산|
-|Algorithm / Interface Level||GEMM||MatMul을 실제 hardware에서 실행하기 위해 정형화한 execution-level computation interface|
+|Model / Algorithm Level|DNN / MLP / CNN / RNN||Neural Network의 구조와 구성 방식을 정의하는 architecture 개념|
+|Mathematical / Operation Level|MatMul||Neural Network 내부 계산을 표현하는 가장 기본적인 수학적 연산|
+|Algorithm / Interface Level|GEMM||MatMul을 실제 hardware에서 실행하기 위해 정형화한 execution-level computation interface|
 |Hardware Architecture Level|Systolic Array||GEMM을 고효율로 수행하기 위한 hardware architecture|
