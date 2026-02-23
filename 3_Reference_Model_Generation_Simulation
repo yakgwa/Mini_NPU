@@ -1,6 +1,6 @@
 앞에서 살펴본 Reference Model을 대상으로 Python을 통해 test_data.txt를 생성하고, 해당 데이터를 ModelSim 환경에서 시뮬레이션하여 동작 검증 및 정확도 검증을 수행하였습니다.
 
-## test_data 출력 
+ test_data 출력 
 
 Directory 내 Python 폴더로 이동하면 여러 Python 스크립트가 존재합니다. 
 
