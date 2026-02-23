@@ -51,66 +51,39 @@ GPU와 비교했을 때 TPU는 inference workload에 최적화된 연산 구조�
 
 <img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_2.jpg" width="400"/>
 
-Multiply와 Adder, Accumulate로 이루어진 MAC 구조
-
-TPU는 deterministic execution model을 사용하며,
-
-99th-percentile response time(p99 latency) 요구사항에 더 잘 맞는 구조입니다.
-
+Multiply와 Adder, Accumulate로 이루어진 MAC 구조로 TPU는 deterministic execution model을 사용하며, 99th-percentile response time(p99 latency) 요구사항에 더 잘 맞는 구조입니다.
 → 이는 추론 workload가 반복적이고 입력 크기와 연산 패턴이 고정되어 실행과 결과가 예측 가능하기 때문이며,
 
 실제 서비스 환경에서 정해진 시간 내에 전체 요청의 99%가 응답되는 요구사항을 안정적으로 만족할 수 있습니다.
 
-​
-
-이러한 설계 선택 덕분에, 
-
-TPU는 많은 MAC과 큰 on-chip memory를 포함하고 있음에도 불구하고  상대적으로 작고 저전력인 칩으로 구현될 수 있었습니다.
-
-​
+이러한 설계 선택 덕분에, TPU는 많은 MAC과 큰 on-chip memory를 포함하고 있음에도 불구하고 상대적으로 작고 저전력인 칩으로 구현될 수 있었습니다.
 
 논문에서는 TPU를 동일한 데이터센터 환경에서 사용된 Intel Haswell CPU와 NVIDIA K80 GPU와 비교합니다.
 
-​
-
-평가에 사용된 workload는 TensorFlow로 작성된 실제 production inference application이며,
-
-MLP, CNN, LSTM 모델을 포함해 데이터센터 추론 워크로드의 약 95%를 대표합니다.
-
+​평가에 사용된 workload는 TensorFlow로 작성된 실제 production inference application이며, MLP, CNN, LSTM 모델을 포함해 데이터센터 추론 워크로드의 약 95%를 대표합니다.
 → 실제 데이터센터에서 돌아가는 대표 추론 모델을 사용해, 실제 서비스 환경을 거의 그대로 반영했음을 나타냅니다.
 
-​
+​그 결과, 일부 application에서의 낮은 자원 활용률에도 불구하고 TPU는 평균적으로 CPU나 GPU 대비 15~30배 빠른 성능을 보였고, 전력 효율(TOPS/Watt) 역시 30~80배 더 높게 나타났습니다.​
 
-그 결과, 일부 application에서의 낮은 자원 활용률에도 불구하고
-
-TPU는 평균적으로 CPU나 GPU 대비 15~30배 빠른 성능을 보였고, 전력 효율(TOPS/Watt) 역시 30~80배 더 높게 나타났습니다.​
-
-1. Introduction — Neural Network와  inference환경
+### 1. Introduction — Neural Network와  inference환경
 
 대규모 데이터와 이를 처리할 수 있는 컴퓨팅 인프라는 머신러닝, 특히 Deep Neural Network(DNN)의 발전을 가능하게 했습니다.
 
-​
-
-신경망(Neural Network)은 입력의 weighted sum에 non-linear activation function을 적용하는 
-
-인공 뉴런(artificial neuron)을 기본 단위로 하며, 
+​신경망(Neural Network)은 입력의 weighted sum에 non-linear activation function을 적용하는 인공 뉴런(artificial neuron)을 기본 단위로 하며, 
 
 이러한 neuron들이 layer로 연결되어 한 layer의 output이 다음 layer의 input으로 전달되는 구조를 가집니다.
 
-​
+DNN에서 “deep”이라는 개념은 다수의 layer가 중첩된 구조에서 비롯되며, cloud 환경의 대규모 data set과 GPU의 높은 computing power는더 많은 layer와 더 큰 model을 학습할 수 있는 기반을 제공했습니다.
 
-DNN에서 “deep”이라는 개념은 다수의 layer가 중첩된 구조에서 비롯되며, 
+<img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_3.jpg" width="400"/>
 
-cloud 환경의 대규모 data set과 GPU의 높은 computing power는더 많은 layer와 더 큰 model을 학습할 수 있는 기반을 제공했습니다.
+<div align="center">Artificial Neuron
 
-
-Artificial Neuron
-
-입력(Input)에 가중치(Weight)를 곱해 합산한 뒤, 그 결과에 activation function을 적용하는 구조
+<div align="center">입력(Input)에 가중치(Weight)를 곱해 합산한 뒤, 그 결과에 activation function을 적용하는 구조
 
 ​
 
-이제 다시 신경망의 동작 과정으로 돌아가 보면, 신경망에는 크게 두 가지 단계가 존재합니다.
+<div align="left">이제 다시 신경망의 동작 과정으로 돌아가 보면, 신경망에는 크게 두 가지 단계가 존재합니다.
 
 Training: 
 
