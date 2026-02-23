@@ -229,7 +229,7 @@ top_sim.v의 Testbench는 단순히 파일을 읽어 데이터를 넣는 구조�
 
 H/W Architecture
 
-​<div align="left">https://blog.naver.com/cho12555/224141951239
+​<div align="left">
 
 + 공통 설정
 
