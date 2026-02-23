@@ -175,3 +175,5 @@ k=1부터 실제 input과 weight 값이 입력되는 것을 확인할 수 있습
 
 <div align="left">
 
+다음 글에서는 Proposed Model의 구조를 분석하고, simulation 과정에서 발생한 error를 단계적으로 debug 및 수정할 예정입니다.
+
