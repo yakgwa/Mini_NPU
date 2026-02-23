@@ -412,6 +412,7 @@
         .a_out (a_conn[r][c+1]),
         .b_in  (b_conn[r][c]),
         .b_out (b_conn[r+1][c]),
+
         
     외부 입력은 이 확장된 버스의 첫 번째 경계(a_conn[r][0], b_conn[0][c])에 사전에 binding되며, 이후 각 PE는 항상 동일한 규칙으로 데이터를 전달합니다.
 - a_conn[r][c] → a_conn[r][c+1]
