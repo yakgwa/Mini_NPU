@@ -225,18 +225,19 @@ top_sim.v의 Testbench는 단순히 파일을 읽어 데이터를 넣는 구조�
 
 다음으로 Reference Model의 Top module인 zynet.v를 분석해보겠습니다.​
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_23.png" width="400"/>
 
 H/W Architecture
 
-자료 출처: https://blog.naver.com/cho12555/224141951239
+​<div align="left">https://blog.naver.com/cho12555/224141951239
 
-공통 설정
++ 공통 설정
 
-include.v를 include하여 parameter(dataWidth, layer neuron 수 등)를 사용.
+    + include.v를 include하여 parameter(dataWidth, layer neuron 수 등)를 사용
 
-axis_in_data_ready는 항상 1로 고정되어, 입력 stream을 항상 수신 가능한 상태(Valid)로 유지.
+    - axis_in_data_ready는 항상 1로 고정되어, 입력 stream을 항상 수신 가능한 상태(Valid)로 유지.
 
-intr는 out_valid에 연결되어, 모든 연산이 끝난 시점에서의 결과를 외부에 알림.
+    - intr는 out_valid에 연결되어, 모든 연산이 끝난 시점에서의 결과를 외부에 알림.
 
 ​
 
