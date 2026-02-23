@@ -51,7 +51,7 @@ GPU와 비교했을 때 TPU는 inference workload에 최적화된 연산 구조�
 
 <div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_2.jpg" width="400"/>
 
-<div align="center">Multiply와 Adder, Accumulate로 이루어진 MAC 구조 
+<div align="center">###### Multiply와 Adder, Accumulate로 이루어진 MAC 구조 
 
 ​
 
