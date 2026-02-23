@@ -2,7 +2,7 @@
 
 MNIST Data Set을 입력으로 받아 숫자(0~9)를 분류하는 Neural Network 모델입니다.
 
-<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_17.png" width="400"/>
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_21.jpg" width="400"/>
 
 MNIST 손글씨 Dataset​
 
