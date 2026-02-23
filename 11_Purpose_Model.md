@@ -464,8 +464,6 @@ input과 weight가 입력된 이후 multiplication이 수행되고, 1-cycle 뒤�
 
 ​이후 문제 발생 지점을 분석하는 과정에서, 다른 스터디원의 분석 내용을 참고하여 Bias_Bank 부분에 문제가 있음을 확인하였습니다.
 
-​
-
 ### Bias_Bank.sv
 
                 case(layer_idx)
@@ -511,6 +509,8 @@ input과 weight가 입력된 이후 multiplication이 수행되고, 1-cycle 뒤�
 이러한 문제를 해결하기 위해 sign extension 대신 left shift를 적용하여 bias에 fractional bit를 추가하도록 수정하였으며, 이를 통해 bias를 MAC의 psum Q-format(Q(16,8))과 정렬시켜 올바른 bias add가 수행되도록 하였습니다.
 
     ex) $signed(sel_b[3]) <<< 8을 적용할 경우, sel_b[3] = 8'b1111_1010이 signed 값 −6으로 해석된 뒤 8-bit left shift가 적용되어, 결과적으로 −6 << 8 = −1536, 즉 16'b1111_1010_0000_0000으로 변환됩니다.
+
+-----------------------------------------------------------------------------------------------------------------------------------------------
 
             always @(*) begin
                 // default (latch 방지)
