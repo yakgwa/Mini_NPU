@@ -38,9 +38,9 @@ Accelerator의 핵심에는 matrix multiplication을 수행하는 systolic array
 
 ​Systolic array의 입력과 출력은 banked SRAM으로 구성된 scratchpad에 저장되며, host CPU가 접근하는 main memory와 scratchpad 간의 데이터 이동은 DMA engine이 담당합니다.
 
-** Banked SRAM은 하나의 큰 메모리를 사용하는 대신, SRAM을 여러 개의 독립적인 bank로 나누어 구성한 메모리 구조입니다.
+* Banked SRAM은 하나의 큰 메모리를 사용하는 대신, SRAM을 여러 개의 독립적인 bank로 나누어 구성한 메모리 구조입니다.
 
-** DMA (Direct Memory Access) engine은 CPU 개입 없이 메모리 간 데이터 이동을 전담하는 하드웨어 블록입니다.
+* DMA (Direct Memory Access) engine은 CPU 개입 없이 메모리 간 데이터 이동을 전담하는 하드웨어 블록입니다.
 
 ​
 
