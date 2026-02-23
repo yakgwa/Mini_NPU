@@ -729,134 +729,47 @@
 
 - 각 Layer 에서 연산할때의 효율은?
 
-기존 Reference Model에서는 각 layer의 연산 차원이 Layer1 = 30, Layer2 = 20, Layer3 = 10으로 정의되어 있습니다.
+    기존 Reference Model에서는 각 layer의 연산 차원이 Layer1 = 30, Layer2 = 20, Layer3 = 10으로 정의되어 있습니다. 이때 weight를 tile 단위로 분할하여 systolic array에 mapping 한다고 가정합니다.
 
-​
+    ​먼저 Layer1(30) 을 기준으로 살펴보면, 4×4 array를 사용할 경우 한 tile에서 4개씩 처리하므로 총 7개의 full tile과 2개의 잔여(weight) 가 발생합니다. 이로 인해 마지막 tile에서는 일부 PE만 활성화되고, 나머지 PE는 IDLE 상태에 들어가게 됩니다. 또한 input activation을 4개 단위로 처리한다고 가정하면, sample 100개에 대해 25개의 tile 이 필요합니다.
 
-이때 weight를 tile 단위로 분할하여 systolic array에 mapping 한다고 가정합니다.
+​    따라서 전체 연산은 대략적으로 8 (weight tile 수, idle 포함) × 25 (activation tile 수) 로, 총 200번​의 tile 연산 단계가 소요됩니다.
 
-​
+    ​반면 5×5 array를 사용할 경우, Layer1 기준으로 weight는 6개의 tile로 정확히 분할되며 idle PE가 발생하지 않습니다. 또한 activation 역시 5개 단위로 처리되므로 sample 100개에 대해 20개의 tile 이 필요합니다.
 
-먼저 Layer1(30) 을 기준으로 살펴보면,
+    이 경우 전체 연산은 6 × 20 = 120번의 tile 연산 단계로 줄어들게 됩니다. 즉, 동일한 연산을 수행하더라도 array 크기가 커질수록 tile 분할 효율이 개선되고, idle PE가 감소하여 전체 실행 cycle 관점에서 더 높은 효율을 기대할 수 있습니다
 
-4×4 array를 사용할 경우 한 tile에서 4개씩 처리하므로 총 7개의 full tile과 2개의 잔여(weight) 가 발생합니다. 
-
-이로 인해 마지막 tile에서는 일부 PE만 활성화되고, 나머지 PE는 IDLE 상태에 들어가게 됩니다.
-
-또한 input activation을 4개 단위로 처리한다고 가정하면, sample 100개에 대해 25개의 tile 이 필요합니다.
-
-​
-
-따라서 전체 연산은 대략적으로
-
-8 (weight tile 수, idle 포함) × 25 (activation tile 수) 로, 총 200번​의 tile 연산 단계가 소요됩니다.
-
-​
-
-반면 5×5 array를 사용할 경우, Layer1 기준으로 weight는 6개의 tile로 정확히 분할되며 idle PE가 발생하지 않습니다. 
-
-또한 activation 역시 5개 단위로 처리되므로 sample 100개에 대해 20개의 tile 이 필요합니다.
-
-이 경우 전체 연산은 6 × 20 = 120번의 tile 연산 단계로 줄어들게 됩니다.
-
-​
-
-즉, 동일한 연산을 수행하더라도 array 크기가 커질수록 tile 분할 효율이 개선되고, 
-
-idle PE가 감소하여 전체 실행 cycle 관점에서 더 높은 효율을 기대할 수 있습니다
-
-​
-
-다만 이러한 효율 향상은 performance 관점에서의 비교이며,
-
-실제 설계 시, data supply rate, interface bandwidth, PPA constraints 등을 함께 고려하여 최종 array size를 결정해야 합니다.
-
-​
-
-​
+    ​다만 이러한 효율 향상은 performance 관점에서의 비교이며, 실제 설계 시, data supply rate, interface bandwidth, PPA constraints 등을 함께 고려하여 최종 array size를 결정해야 합니다.
 
 - 외부 인터페이스 관점 (AXI / PCIe)
 
-실제 동작 환경에서 systolic array는 외부 interface를 통해 지속적으로 데이터를 공급받습니다. 
+    실제 동작 환경에서 systolic array는 외부 interface를 통해 지속적으로 데이터를 공급받습니다. 일반적으로 AXI-Lite는 제어 신호 전달을 목적으로 32-bit 폭을 사용하며, 대용량 데이터 전송을 담당하는 AXI-Full(또는 AXI-Stream)는 32/64/128/256/512-bit와 같이 2의 거듭제곱 형태의 bus width를 사용하는 것이 일반적입니다.
 
-​
+    또한 Google TPU v1 역시  PCIe 기반 interface를 사용하며, PCIe 역시 lane aggregation 구조상 datawidth가 2의 거듭제곱 단위로 확장되는 특성을 가집니다.
 
-일반적으로 AXI-Lite는 제어 신호 전달을 목적으로 32-bit 폭을 사용하며, 
-
-대용량 데이터 전송을 담당하는 AXI-Full(또는 AXI-Stream)는 32/64/128/256/512-bit와 같이 
-
-2의 거듭제곱 형태의 bus width를 사용하는 것이 일반적입니다.
-
-​
-
-또한 Google TPU v1 역시  PCIe 기반 interface를 사용하며, 
-
-PCIe 역시 lane aggregation 구조상 datawidth가 2의 거듭제곱 단위로 확장되는 특성을 가집니다.
-
-​
-
-이러한 interface 특성을 고려하면, systolic array의 크기 역시 2의 거듭제곱(예: 4×4, 8×8)으로 구성하는 것이 
-
-데이터 packing 및 전송 효율 측면에서 구조적으로 유리할 수 있습니다.
-
-​
+​    이러한 interface 특성을 고려하면, systolic array의 크기 역시 2의 거듭제곱(예: 4×4, 8×8)으로 구성하는 것이 데이터 packing 및 전송 효율 측면에서 구조적으로 유리할 수 있습니다.
 
 정리하자면
 
-입력 activation 및 weight를 bus width에 맞게 정렬(pack)하기 용이
+- 입력 activation 및 weight를 bus width에 맞게 정렬(pack)하기 용이
+- 부분 tile 처리로 인한 padding 및 wasted bandwidth 감소
+- DMA 및 burst 전송 구성 시 address 계산 및 제어 로직 단순화
+- array와 인터페이스 간 데이터 스트리밍이 보다 일정한 cadence로 유지됨
 
-부분 tile 처리로 인한 padding 및 wasted bandwidth 감소
+    반면, 5×5와 같은 비-2의 거듭제곱 형태의 array는 연산 관점에서는 PE 활용률이 높을 수 있으나, 인터페이스 측면에서는 bus utilization이 떨어지거나 추가적인 packing/unpacking 로직이 필요해질 수 있습니다.
 
-DMA 및 burst 전송 구성 시 address 계산 및 제어 로직 단순화
+    따라서 array size 선택 시에는 단순히 연산 효율(PE utilization)만이 아니라, 외부 interface의 bus width, 데이터 전송 패턴, 시스템 전체 throughput을 함께 고려하는 것이 중요합니다. 
 
-array와 인터페이스 간 데이터 스트리밍이 보다 일정한 cadence로 유지됨
+​- PPA(Performance / Power / Area) 관점
 
-​
+    Systolic array의 크기는 PPA trade-off를 직접적으로 결정합니다. 일반적으로 array를 키우면 병렬도가 증가하여 성능은 개선되지만, 그 대가로 area과 power 소모가 증가합니다. 따라서 “얼마나 크게 확장할 것인가”는 목표 성능과 시스템 제약(Area/Power budget)에 의해 제한됩니다.
 
-반면, 5×5와 같은 비-2의 거듭제곱 형태의 array는 연산 관점에서는 PE 활용률이 높을 수 있으나, 
+​- 시스템 전체 Throughput 관점 (PE 효율 vs Bandwidth)
 
-인터페이스 측면에서는 bus utilization이 떨어지거나 추가적인 packing/unpacking 로직이 필요해질 수 있습니다.
+    4×4 array는 일부 layer에서 PE utilization이 낮아질 수 있습니다. 그렇다고 항상 더 큰 array가 유리한 것은 아닙니다. 만약 데이터 공급 시간이 SA 연산 시간보다 길다면, 아무리 PE 효율이 높아도 NPU는 입력을 기다리며 idle 상태가 됩니다. 
 
-​
+​    이 경우에는 bus bandwidth와 궁합이 좋은 4×4 구조를 사용하여, 끊김 없이 데이터를 공급하는 것이 시스템 전체 throughput을 높이는 데 유리할 수 있습니다.
 
-따라서 array size 선택 시에는 단순히 연산 효율(PE utilization)만이 아니라, 
-
-외부 interface의 bus width, 데이터 전송 패턴, 시스템 전체 throughput을 함께 고려하는 것이 중요합니다. 
-
-​
-
-- PPA(Performance / Power / Area) 관점
-
-Systolic array의 크기는 PPA trade-off를 직접적으로 결정합니다. 
-
-일반적으로 array를 키우면 병렬도가 증가하여 성능은 개선되지만, 그 대가로 area과 power 소모가 증가합니다. 
-
-​
-
-따라서 “얼마나 크게 확장할 것인가”는 목표 성능과 시스템 제약(Area/Power budget)에 의해 제한됩니다.
-
-​
-
-- 시스템 전체 Throughput 관점 (PE 효율 vs Bandwidth)
-
-4×4 array는 일부 layer에서 PE utilization이 낮아질 수 있습니다. 
-
-그렇다고 항상 더 큰 array가 유리한 것은 아닙니다.
-
-​
-
-만약 데이터 공급 시간이 SA 연산 시간보다 길다면, 아무리 PE 효율이 높아도 NPU는 입력을 기다리며 idle 상태가 됩니다. 
-
-​
-
-이 경우에는 bus bandwidth와 궁합이 좋은 4×4 구조를 사용하여, 
-
-끊김 없이 데이터를 공급하는 것이 시스템 전체 throughput을 높이는 데 유리할 수 있습니다.
-
-​
-
-반대로, 데이터는 충분히 빠르게 들어오지만 PE 수가 부족하여 연산이 병목이 되는 경우라면, 
-
-5×5와 같은 더 큰 array가 오히려 성능 면에서 유리할 수 있습니다.
+​    반대로, 데이터는 충분히 빠르게 들어오지만 PE 수가 부족하여 연산이 병목이 되는 경우라면, 5×5와 같은 더 큰 array가 오히려 성능 면에서 유리할 수 있습니다.
 
 이제 지금까지 설계한 systolic array를 실제 layer 구성에 적용하여, mini-TPU 형태의 가속기를 설계해보도록 하겠습니다.
