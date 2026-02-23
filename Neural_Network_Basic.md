@@ -19,48 +19,32 @@
 ​- DNN (Deep Neural Network) :
   여러 개의 hidden layer를 가지는 Neural Network를 포괄적으로 지칭하는 개념입니다. 특정한 구조를 의미하기보다는, 네트워크의 depth(depth-wise complexity)를 강조하는 상위 분류(umbrella term)에 가깝습니다.
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_18.png" width="400"/>
+
+​
+
+<div align="left">
+  
 ​- MLP (Multi-Layer Perceptron) : 
   multiple fully connected layer로 구성된 가장 기본적인 DNN architecture입니다. 내부 연산은 MatMul + Bias Add + Activation 형태로 직접 표현되며, Neural Network 연산이 MatMul 기반으로 구현됨을 가장 직관적으로 보여주는 예시입니다.
 
 ​- CNN (Convolutional Neural Network) : 
   convolution operation을 중심으로 구성된 Neural Network architecture입니다. 개념적으로는 convolution 연산을 사용하지만, 실제 실행 단계에서는 image-to-column 등의 변환을 통해 MatMul 형태로 변환되어 계산됩니다.
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_19.jpg" width="400"/>
 
- 
-Level of Abstraction
+​
 
-개념
-
-역할 / 의미
-
-Model / Algorithm Level
-
-DNN / MLP / CNN / RNN
-
-Neural Network의 구조와 구성 방식을 정의하는 architecture 개념
-
-Mathematical / Operation Level
-
-MatMul
-
-Neural Network 내부 계산을 표현하는 가장 기본적인 수학적 연산
-
-Algorithm / Interface Level
-
-GEMM
-
-MatMul을 실제 hardware에서 실행하기 위해 정형화한 
-
-execution-level computation interface
-
-Hardware Architecture Level
-
-Systolic Array
-
-GEMM을 고효율로 수행하기 위한 hardware architecture 
-
+<div align="left">
+  
 - RNN (Recurrent Neural Network) : 
   sequence data 처리를 위해 recurrent connection을 가지는 Neural Network architecture입니다. 시간 축 방향으로 state가 반복적으로 전달되며, 내부 계산은 time-step 단위의 반복적인 MatMul과 accumulation으로 구성됩니다. 이 레벨에서는 사용되는 computation의 종류보다는, Neural Network의 구조와 구성 방식에 초점을 둡니다. 
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_20.png" width="400"/>
+
+​
+
+<div align="left">
 
 - Mathematical / Operation Level (Mathematical computation) :
   다음 레벨에서는 Neural Network 내부에서 수행되는 계산을 수학적 연산 관점에서 바라봅니다.
