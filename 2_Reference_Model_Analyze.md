@@ -137,14 +137,14 @@ sendData() task 내부 동작을 시간 순서로 정리하면 다음과 같습�
 
 ### 7.1 파일 로드
 
-$readmemb(fileName, in_mem);
-in_mem[0:784]에 pixel 및 label 저장
+    $readmemb(fileName, in_mem);
+    in_mem[0:784]에 pixel 및 label 저장
 
 ### 7.2 Pixel Stream 전송
 
-for (t = 0; t < 784; t++)
-    in       <= in_mem[t];
-    in_valid <= 1;
+    for (t = 0; t < 784; t++)
+        in       <= in_mem[t];
+        in_valid <= 1;
     
 → 총 784 cycle 동안 연속 전송
 
@@ -157,22 +157,22 @@ for (t = 0; t < 784; t++)
 ### 7.3 Label 저장
 
 루프 종료 후:
-in_valid <= 0;
-expected = in_mem[784];
+    in_valid <= 0;
+    expected = in_mem[784];
 마지막 index(784)는 DUT에 전송되지 않으며, 검증을 위한 expected label로만 사용됩니다.
 
 ### 8. Inference 완료 대기
 
 입력 전송이 완료되면 Testbench는 다음 신호를 기다립니다.
 
-@(posedge intr);
+    @(posedge intr);
 
 → intr는 DUT의 inference 완료 신호입니다. 따라서 동작 흐름은 다음과 같습니다.
 
-Pixel Stream 입력
-→ 내부 MAC 연산
-→ Layer 연산 완료
-→ intr assert
+    Pixel Stream 입력
+    → 내부 MAC 연산
+    → Layer 연산 완료
+    → intr assert
 Testbench는 interrupt 기반으로 결과 준비 완료를 판단합니다.
 
 ### 9. Result Read 및 정확도 계산
@@ -181,13 +181,13 @@ intr가 발생하면 다음을 수행합니다.
 
 readAxi(8);
 
-→  AXI-Lite를 통해 Result register read
-→ 결과는 axiRdData에 저장
+    →  AXI-Lite를 통해 Result register read
+    → 결과는 axiRdData에 저장
 
 이후,
 
-if (axiRdData == expected)
-    right++;
+    if (axiRdData == expected)
+        right++;
     
 → 정답 여부를 비교하여 accuracy를 누적합니다.
 
@@ -221,7 +221,7 @@ top_sim.v의 Testbench는 단순히 파일을 읽어 데이터를 넣는 구조�
 
 이라는 완전한 inference verification flow를 구성하고 있습니다.
 
-##Reference Model Top (zynet.v) 분석
+## Reference Model Top (zynet.v) 분석
 
 다음으로 Reference Model의 Top module인 zynet.v를 분석해보겠습니다.​
 
