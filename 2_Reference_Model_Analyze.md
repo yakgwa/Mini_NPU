@@ -271,15 +271,15 @@ H/W Architecture
     
         -SEND
 
-holdData_X의 LSB(dataWidth)를 out_data_X로 출력
-
-holdData_X를 dataWidth만큼 shift
-
-data_out_valid_X를 assert하여 다음 Layer 입력 valid로 사용
-
-지정된 neuron 수만큼 전송 후 IDLE 복귀
-
-즉, 각 Layer의 vector 출력은 out_data_X / data_out_valid_X 형태의 scalar stream으로 변환 후, 다음 Layer로 전달.
+            - holdData_X의 LSB(dataWidth)를 out_data_X로 출력
+            
+            - holdData_X를 dataWidth만큼 shift
+            
+            - data_out_valid_X를 assert하여 다음 Layer 입력 valid로 사용
+            
+            - 지정된 neuron 수만큼 전송 후 IDLE 복귀
+            
+            - 즉, 각 Layer의 vector 출력은 out_data_X / data_out_valid_X 형태의 scalar stream으로 변환 후, 다음 Layer로 전달.
 
 ​
 
