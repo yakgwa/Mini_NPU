@@ -1,29 +1,26 @@
-##Reference Model 소개
-
-​
+## Reference Model 소개
 
 MNIST Data Set을 입력으로 받아 숫자(0~9)를 분류하는 Neural Network 모델입니다.
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_17.png" width="400"/>
 
-MNIST 손글씨 Dataset
+MNIST 손글씨 Dataset​
 
-GitHub (Reference Code)
-
-https://github.com/yeshvanth-m/CNN-Handwritten-Digit-MNIST
-
+<div align="left">
 ​
+- GitHub (Reference Code)
 
-관련 영상
+    https://github.com/yeshvanth-m/CNN-Handwritten-Digit-MNIST
 
-https://youtu.be/NJgFl8gsZzM?si=ek-daA4LbSv3Ywsa
+- 관련 영상
 
-https://youtu.be/rw_JITpbh3k?si=10GmqDOyCYjxIFBF
+    https://youtu.be/NJgFl8gsZzM?si=ek-daA4LbSv3Ywsa
+    
+    https://youtu.be/rw_JITpbh3k?si=10GmqDOyCYjxIFBF
 
 ※ 시작하기 전에, Testbench 확인의 중요성
 
-프로젝트를 분석하기 위해서는 먼저 전체 구조를 파악해야 합니다. 
-
-이를 위해 가장 효과적인 방법 중 하나는 Testbench를 우선적으로 확인하는 것입니다.
+프로젝트를 분석하기 위해서는 먼저 전체 구조를 파악해야 합니다. 이를 위해 가장 효과적인 방법 중 하나는 Testbench를 우선적으로 확인하는 것입니다.
 
 ​
 
