@@ -658,7 +658,11 @@ Layer 3
                 
 해당 state에서는 write_seq_cnt를 1..16까지 증가시키며, (img 0..3) × (neuron_in_group 0..3)에 해당하는 총 16개의 activation output (이전 state의 output)을 순차적으로 저장합니다.
 
-​이때 write address는 write_seq_cnt-1를 기준으로 계산된 wr_img_idx와 wr_neu_idx를 사용하여 결정됩니다. wr_neu_idx는 현재 neuron group 내에서의 local index를 의미하며, 이를 wr_global_neuron_idx = group_cnt*4 + wr_neu_idx 형태로 변환함으로써, 전체 layer 기준에서의 global neuron index를 생성합니다.
+​이때 write address는 write_seq_cnt-1를 기준으로 계산된 wr_img_idx와 wr_neu_idx를 사용하여 결정됩니다. wr_neu_idx는 현재 neuron group 내에서의 local index를 의미하며, 이를 
+
+        wr_global_neuron_idx = group_cnt*4 + wr_neu_idx 
+        
+형태로 변환함으로써, 전체 layer 기준에서의 global neuron index를 생성합니다.
 
 ​즉, group 단위로 나누어 처리된 neuron 결과를 Global_Buffer 상의 연속된 neuron address 공간에 올바르게 mapping하기 위한 계산입니다.
 
