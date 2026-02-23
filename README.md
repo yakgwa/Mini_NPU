@@ -49,9 +49,9 @@ GPU와 비교했을 때 TPU는 inference workload에 최적화된 연산 구조�
 
 ​TPU의 핵심은 65,536개의 8-bit MAC으로 구성된 Matrix Multiply Unit입니다. 이를 통해 최대 92 TOPS(Tera Operations Per Second)의 연산 성능을 제공합니다.
 
-<div align="center"> <img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_2.jpg" width="400"/>
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_2.jpg" width="400"/>
 
-<div align="center"> Multiply와 Adder, Accumulate로 이루어진 MAC 구조 
+<div align="center">Multiply와 Adder, Accumulate로 이루어진 MAC 구조 
 
 ​
 
@@ -79,7 +79,7 @@ GPU와 비교했을 때 TPU는 inference workload에 최적화된 연산 구조�
 
 DNN에서 “deep”이라는 개념은 다수의 layer가 중첩된 구조에서 비롯되며, cloud 환경의 대규모 data set과 GPU의 높은 computing power는더 많은 layer와 더 큰 model을 학습할 수 있는 기반을 제공했습니다.
 
-<img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_3.jpg" width="400"/>
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_3.jpg" width="400"/>
 
 <div align="center">Artificial Neuron
 
@@ -89,49 +89,33 @@ DNN에서 “deep”이라는 개념은 다수의 layer가 중첩된 구조에�
 
 <div align="left">이제 다시 신경망의 동작 과정으로 돌아가 보면, 신경망에는 크게 두 가지 단계가 존재합니다.
 
-Training: 
+Training: 모델의 구조는 고정한 채, 정답이 있는 데이터를 반복적으로 입력하며 예측 결과가 맞아지도록 weight 값을 학습하는 단계
 
-모델의 구조는 고정한 채, 정답이 있는 데이터를 반복적으로 입력하며 예측 결과가 맞아지도록 weight 값을 학습하는 단계
+Inference: Training을 통해 이미 학습된 weight를 그대로 사용하여, 새로운 입력이 주어졌을 때 정답을 분류하거나 결과를 예측하는 단계.
 
-Inference:
+​Training 단계에서는 weight 학습 과정의 수치적 안정성을 위해 높은 정밀도의 floating-point 연산이 요구되며, 현재 대부분의 training은 16-bit floating-point 연산을 기반으로 수행됩니다.
 
-Training을 통해 이미 학습된 weight를 그대로 사용하여, 새로운 입력이 주어졌을 때 정답을 분류하거나 결과를 예측하는 단계.
+​반면, 논문에서 다루는 데이터센터 inference workload의 경우 이미 학습된 weight를 사용하므로, quantization을 통해 8-bit 정수 연산으로 변환하더라도 대부분의 경우 충분한 정확도를 유지할 수 있습니다.
 
-​
+​이러한 선택은  Power, Performance, Area(PPA) 측면에서 유리한 설계 trade-off로 설명됩니다.
 
-Training 단계에서는 weight 학습 과정의 수치적 안정성을 위해 높은 정밀도의 floating-point 연산이 요구되며,
-
-현재 대부분의 training은 16-bit floating-point 연산을 기반으로 수행됩니다.
-
-​
-
-반면, 논문에서 다루는 데이터센터 inference workload의 경우 이미 학습된 weight를 사용하므로,
-
-quantization을 통해 8-bit 정수 연산으로 변환하더라도 대부분의 경우 충분한 정확도를 유지할 수 있습니다.
-
-​
-
-이러한 선택은  Power, Performance, Area(PPA) 측면에서 유리한 설계 trade-off로 설명됩니다.
-
-​
-
-1.1 데이터센터에서 사용되는 Neural Network 유형
+​### 1.1 데이터센터에서 사용되는 Neural Network 유형
 
 현재 데이터센터 추론 환경에서 널리 사용되는 신경망은 크게 세 가지 유형으로 나눌 수 있습니다.
 
-MLP (Multi-Layer Perceptron: 각 layer가 이전 layer의 모든 출력과 fully connected로 연결되는 구조
+- MLP (Multi-Layer Perceptron: 각 layer가 이전 layer의 모든 출력과 fully connected로 연결되는 구조
 
-CNN (Convolutional Neural Network): 공간적으로 인접한 입력에 대해 동일한 weight를 반복 적용하는 구조
+- CNN (Convolutional Neural Network): 공간적으로 인접한 입력에 대해 동일한 weight를 반복 적용하는 구조
 
-RNN / LSTM (Recurrent Neural Network): 이전에 처리한 정보를 기억하면서, 시간 순서대로 데이터를 하나씩 처리하는 구조
+- RNN / LSTM (Recurrent Neural Network): 이전에 처리한 정보를 기억하면서, 시간 순서대로 데이터를 하나씩 처리하는 구조
 
- 
-
- 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_4.jpg" width="400"/>
 
 ​
 
-1.2 추론 workload의 현실적인 제약
+<div align="left">
+
+### 1.2 추론 workload의 현실적인 제약
 
 논문에서 사용하는 여섯 개의 benchmark application은 앞서 정리한 세 가지 신경망 유형
 
