@@ -8,7 +8,7 @@
 
 이에 따라 본격적인 분석에 앞서, 관련 개념들을 role과 level of abstraction 관점에서 정리했습니다.
 
-<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_17.jpg" width="400"/>
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_17.png" width="400"/>
 
 <div align="left">
 
