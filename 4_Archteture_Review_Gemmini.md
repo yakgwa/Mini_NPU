@@ -16,7 +16,7 @@ Gemmini는 DNN accelerator를 독립적인 연산 블록으로 보지 않고, sy
 
 ​Gemmini는 Chisel HDL을 사용해 개발되었습니다.
 
-<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_40.png" width="100"/>
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_40.png" width="400"/>
 
 <div align="left">
 
