@@ -179,9 +179,7 @@ TPU Block Diagram
 → TPU를 제어하는 host(일반적으로 CPU)가 수행할 연산과 데이터 이동에 대한 지시사항(Instruction)을 생성해 TPU로 전달합니다.
 
 이때 host와 TPU는 표준 interface인 PCIe Gen3 x16을 통해 연결되며, 전달된 instruction은 TPU 내부의 instruction buffer (그림의 Instr Block)에 저장된 뒤 순차적으로 해석·실행됩니다.
-→ 대규모 행렬 곱 연산 시 연속적인 데이터 공급과 peak utilization(연산 유닛이 매 cycle마다 쉬지 않고 동작)을 유지하기 위해,
-
-내부 block 간을 매우 넓은 data path로 연결하는 구조를 채택했습니다. TPU 구조의 중심에는 Matrix Multiply Unit이 위치합니다.
+→ 대규모 행렬 곱 연산 시 연속적인 데이터 공급과 peak utilization(연산 유닛이 매 cycle마다 쉬지 않고 동작)을 유지하기 위해, 내부 block 간을 매우 넓은 data path로 연결하는 구조를 채택했습니다. TPU 구조의 중심에는 Matrix Multiply Unit이 위치합니다.
 
 이 unit은 256×256 MAC array 로 구성되어 있으며, signed 또는 unsigned 8-bit integer multiply & add 연산을 수행합니다.
 
@@ -207,6 +205,7 @@ Matrix Multiply Unit은 clock cycle당 하나의 256-element partial sum을 생�
 → bit width가 증가할수록 하나의 MAC 연산이 더 많은 하드웨어 자원을 점유하게 되며, 그 결과 동일한 하드웨어에서 처리 가능한 연산 throughput이 감소합니다.
 
 <div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_8.png" width="400"/>
+ 
 Matrix Unit (Systolic array) 예시
 
 <div align="left">Matrix Unit은 cycle당 256개의 value를 read/write할 수 있으며, matrix multiplication과 convolution을 모두 수행할 수 있습니다.
