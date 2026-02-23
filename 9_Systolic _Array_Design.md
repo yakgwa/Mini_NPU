@@ -333,430 +333,399 @@
     
     - B 주입: k = cnt - c로 계산하여, k가 유효 범위일 때 latched_mat_b[k][c]를 array_b_in[c]로 출력합니다. 
 
-        마찬가지로 유효 범위를 벗어나면 0을 주입합니다.
+    마찬가지로 유효 범위를 벗어나면 0을 주입합니다.
 
-//==========================================================
-// Data Skewing Logic
-//==========================================================
-genvar r, c;
-generate
-  // Row Input Control (Matrix A -> Row Stream)
-  for (r = 0; r < ROWS; r++) begin : GEN_SKEW_A
-    always_comb begin
-      array_a_in[r] = '0;   // default padding
-      if (state == RUN) begin
-        int k;
-        k = cnt - r;
-        if (k >= 0 && k < K_DIM) begin
-          array_a_in[r] = latched_mat_a[r][k];
-        end
-      end
-    end
-  end
-
-  // Column Input Control (Matrix B -> Column Stream)
-  for (c = 0; c < COLS; c++) begin : GEN_SKEW_B
-    always_comb begin
-      array_b_in[c] = '0;   // default padding
-      if (state == RUN) begin
-        int k;
-        k = cnt - c;
-        if (k >= 0 && k < K_DIM) begin
-          array_b_in[c] = latched_mat_b[k][c];
-        end
-      end
-    end
-  end
-endgenerate
-이와 같은 skewing을 통해, 
-
-배열 내에서 A는 우측, B는 하단으로 전파되는 동안 각 PE에서 동일한 k에 해당하는 데이터가 정렬되어 MAC이 정상적으로 수행됩니다.
-
-5. Systolic Array + Controller + Activation Function
-
-DUT
-
-module systolic_controller_relu #(
-  parameter int DATA_W = 8,
-  parameter int K_DIM  = 2, //Common dimension
-  parameter int ROWS   = 2,
-  parameter int COLS   = 2,
-
-  // [추가] 활성화 함수용 파라미터 (Threshold/Bias)
-  // 이 값보다 작은 연산 결과는 노이즈로 간주하고 0으로 만듭니다.
-  parameter int BIAS   = 50, 
-
-  // 내부 파라미터
-  parameter int ACC_W  = 2*DATA_W + $clog2(K_DIM)
-)(
-  input  logic                      clk,
-  input  logic                      rst_n,
-
-  // --- Control Interface ---
-  input  logic                      i_start,
-  output logic                      o_done,
-  output logic                      o_busy,
-
-  // --- Data Interface ---
-  input  logic signed [DATA_W-1:0]         i_mat_a [0:ROWS-1][0:K_DIM-1],
-  input  logic signed [DATA_W-1:0]         i_mat_b [0:K_DIM-1][0:COLS-1],
-  output logic signed [ACC_W-1:0]          o_mat_c [0:ROWS-1][0:COLS-1]
-);
-
-  //==========================================================
-  // 1. 내부 상태 및 버퍼 정의
-  //==========================================================
-  typedef enum logic [1:0] {
-    IDLE,
-    RUN,
-    DONE_STATE
-  } state_t;
-
-  state_t state, next_state;
-  logic [7:0] cnt; 
-
-  // Input Buffer: 입력 데이터를 저장(Latch)해두는 공간
-  logic signed [DATA_W-1:0] latched_mat_a [0:ROWS-1][0:K_DIM-1];
-  logic signed [DATA_W-1:0] latched_mat_b [0:K_DIM-1][0:COLS-1];
-
-  // Array Interface: 실제 Systolic Array로 들어가는 신호
-  logic signed [DATA_W-1:0] array_a_in [0:ROWS-1];
-  logic signed [DATA_W-1:0] array_b_in [0:COLS-1];
-  logic              array_en;
-  logic              array_clr; 
-
-  // [핵심] Array의 순수 결과값 (PPU 입력용 내부 와이어)
-  logic signed [ACC_W-1:0]  raw_acc_sum [0:ROWS-1][0:COLS-1];
-
-  // 연산 완료까지 걸리는 시간 계산
-  // 데이터 주입 완료(ROWS + K_DIM) + 파이프라인 통과(COLS) + 여유
-  localparam int CALC_CYCLES = ROWS + COLS + K_DIM + 2;
-
-  //==========================================================
-  // 2. FSM & Counter
-  //==========================================================
-  always_ff @(posedge clk or negedge rst_n) begin
-    if (!rst_n) begin
-      state <= IDLE;
-      cnt   <= 0;
-    end else begin
-      state <= next_state;
-      if (state == RUN) cnt <= cnt + 1;
-      else              cnt <= 0;
-    end
-  end
-
-  always_comb begin
-    next_state = state;
-    case (state)
-      IDLE: begin
-        if (i_start) next_state = RUN;
-      end
-      RUN: begin
-        if (cnt >= CALC_CYCLES) next_state = DONE_STATE;
-      end
-      DONE_STATE: begin
-        if (!i_start) next_state = IDLE;
-      end
-    endcase
-  end
-
-  // Output Assignments
-  assign o_busy   = (state == RUN);
-  assign o_done   = (state == DONE_STATE);
-
-  // Array Control Signals
-  assign array_en = (state == RUN);
-
-  // IDLE 상태에서 start가 들어오는 순간 Clear 수행 (Accumulator 초기화)
-  // 이렇게 하면 PE 내부의 acc_sum이 0으로 리셋되고 새 연산을 시작합니다.
-  assign array_clr = (state == IDLE) && i_start;
-
-  //==========================================================
-  // 3. Input Buffer Latching
-  //==========================================================
-  // 연산 도중 입력값이 바뀌어도 내부 연산이 꼬이지 않도록 캡처
-  always_ff @(posedge clk) begin
-    if (state == IDLE && i_start) begin
-      latched_mat_a <= i_mat_a;
-      latched_mat_b <= i_mat_b;
-    end
-  end
-
-  //==========================================================
-  // 4. Data Skewing Logic
-  //==========================================================
-  genvar r, c;
-  generate
-    // Row Input Control (Matrix A -> Row Input)
-    for (r = 0; r < ROWS; r++) begin : GEN_SKEW_A
-      always_comb begin
-        array_a_in[r] = '0; // Default 0 padding
-        if (state == RUN) begin
-          // Timing Logic: time(cnt) - row_index(r) = col_index(k)
-          int k;
-          k = cnt - r;
-          if (k >= 0 && k < K_DIM) begin
-            array_a_in[r] = latched_mat_a[r][k];
+        //==========================================================
+        // Data Skewing Logic
+        //==========================================================
+        genvar r, c;
+        generate
+          // Row Input Control (Matrix A -> Row Stream)
+          for (r = 0; r < ROWS; r++) begin : GEN_SKEW_A
+            always_comb begin
+              array_a_in[r] = '0;   // default padding
+              if (state == RUN) begin
+                int k;
+                k = cnt - r;
+                if (k >= 0 && k < K_DIM) begin
+                  array_a_in[r] = latched_mat_a[r][k];
+                end
+              end
+            end
           end
-        end
-      end
-    end
-
-    // Column Input Control (Matrix B -> Col Input)
-    for (c = 0; c < COLS; c++) begin : GEN_SKEW_B
-      always_comb begin
-        array_b_in[c] = '0; // Default 0 padding
-        if (state == RUN) begin
-          // Timing Logic: time(cnt) - col_index(c) = row_index(k)
-          int k;
-          k = cnt - c;
-          if (k >= 0 && k < K_DIM) begin
-            array_b_in[c] = latched_mat_b[k][c];
+        
+          // Column Input Control (Matrix B -> Column Stream)
+          for (c = 0; c < COLS; c++) begin : GEN_SKEW_B
+            always_comb begin
+              array_b_in[c] = '0;   // default padding
+              if (state == RUN) begin
+                int k;
+                k = cnt - c;
+                if (k >= 0 && k < K_DIM) begin
+                  array_b_in[c] = latched_mat_b[k][c];
+                end
+              end
+            end
           end
-        end
-      end
-    end
-  endgenerate
+        endgenerate
+        
+이와 같은 skewing을 통해, 배열 내에서 A는 우측, B는 하단으로 전파되는 동안 각 PE에서 동일한 k에 해당하는 데이터가 정렬되어 MAC이 정상적으로 수행됩니다.
 
-  //==========================================================
-  // 5. Systolic Array Instantiation
-  //==========================================================
-  systolic_array_2d #(
-    .DATA_W (DATA_W),
-    .ACC_W  (ACC_W),
-    .ROWS   (ROWS),
-    .COLS   (COLS)
-  ) u_core_array (
-    .clk        (clk),
-    .rst_n      (rst_n),
-    .clr        (array_clr),
-    .en         (array_en),
-    .a_in_row   (array_a_in),
-    .b_in_col   (array_b_in),
-    .pe_mul     (),
-    .pe_acc_sum (raw_acc_sum) // [주의] 최종 출력이 아니라 내부 와이어로 연결
-  );
-  //==========================================================
-  // [NEW] 6. Post-Processing Unit (ReLU + Bias)
-  //==========================================================
-  generate
-    for (r = 0; r < ROWS; r++) begin : GEN_PPU_ROW
-      for (c = 0; c < COLS; c++) begin : GEN_PPU_COL
+## 5. Systolic Array + Controller + Activation Function
 
-        always_comb begin
-          // 1. Bias Subtraction (Signed 연산)
-          //    값이 작으면 음수가 될 수 있으므로 int(32bit)로 변환하여 계산
-          int temp_val;
+### DUT
 
-          temp_val = int'(raw_acc_sum[r][c]) - BIAS;
-
-          // 2. ReLU (Rectified Linear Unit)
-          //    0보다 작으면 0(Dead), 아니면 그대로 통과
-          if (temp_val < 0) begin
-            o_mat_c[r][c] = '0; // Deactivate (Output 0)
-          end else begin
-            o_mat_c[r][c] = temp_val[ACC_W-1:0]; // Activate (Pass)
+        module systolic_controller_relu #(
+          parameter int DATA_W = 8,
+          parameter int K_DIM  = 2, //Common dimension
+          parameter int ROWS   = 2,
+          parameter int COLS   = 2,
+        
+          // [추가] 활성화 함수용 파라미터 (Threshold/Bias)
+          // 이 값보다 작은 연산 결과는 노이즈로 간주하고 0으로 만듭니다.
+          parameter int BIAS   = 50, 
+        
+          // 내부 파라미터
+          parameter int ACC_W  = 2*DATA_W + $clog2(K_DIM)
+        )(
+          input  logic                      clk,
+          input  logic                      rst_n,
+        
+          // --- Control Interface ---
+          input  logic                      i_start,
+          output logic                      o_done,
+          output logic                      o_busy,
+        
+          // --- Data Interface ---
+          input  logic signed [DATA_W-1:0]         i_mat_a [0:ROWS-1][0:K_DIM-1],
+          input  logic signed [DATA_W-1:0]         i_mat_b [0:K_DIM-1][0:COLS-1],
+          output logic signed [ACC_W-1:0]          o_mat_c [0:ROWS-1][0:COLS-1]
+        );
+        
+          //==========================================================
+          // 1. 내부 상태 및 버퍼 정의
+          //==========================================================
+          typedef enum logic [1:0] {
+            IDLE,
+            RUN,
+            DONE_STATE
+          } state_t;
+        
+          state_t state, next_state;
+          logic [7:0] cnt; 
+        
+          // Input Buffer: 입력 데이터를 저장(Latch)해두는 공간
+          logic signed [DATA_W-1:0] latched_mat_a [0:ROWS-1][0:K_DIM-1];
+          logic signed [DATA_W-1:0] latched_mat_b [0:K_DIM-1][0:COLS-1];
+        
+          // Array Interface: 실제 Systolic Array로 들어가는 신호
+          logic signed [DATA_W-1:0] array_a_in [0:ROWS-1];
+          logic signed [DATA_W-1:0] array_b_in [0:COLS-1];
+          logic              array_en;
+          logic              array_clr; 
+        
+          // [핵심] Array의 순수 결과값 (PPU 입력용 내부 와이어)
+          logic signed [ACC_W-1:0]  raw_acc_sum [0:ROWS-1][0:COLS-1];
+        
+          // 연산 완료까지 걸리는 시간 계산
+          // 데이터 주입 완료(ROWS + K_DIM) + 파이프라인 통과(COLS) + 여유
+          localparam int CALC_CYCLES = ROWS + COLS + K_DIM + 2;
+        
+          //==========================================================
+          // 2. FSM & Counter
+          //==========================================================
+          always_ff @(posedge clk or negedge rst_n) begin
+            if (!rst_n) begin
+              state <= IDLE;
+              cnt   <= 0;
+            end else begin
+              state <= next_state;
+              if (state == RUN) cnt <= cnt + 1;
+              else              cnt <= 0;
+            end
           end
-        end
-
-      end
-    end
-  endgenerate
-
-endmodule
-TB
-
-//[5] systolic_array_2d + controller + Activation(ReLu)
-
-`timescale 1ns/1ps
-
-module tb_systolic_controller_relu;
-
-  parameter int DATA_W = 8;
-  parameter int K_DIM  = 2;
-  parameter int ROWS   = 2;
-  parameter int COLS   = 2;
-
-  // [설정] Bias를 50으로 설정 (행렬 곱 결과가 50보다 작으면 0이 됨)
-  // 랜덤 입력이 보통 15*15=225 근처이므로, 일부 값은 0이 될 수 있음
-  parameter int BIAS   = 50; 
-
-  parameter int ACC_W  = 2*DATA_W + $clog2(K_DIM);
-
-  logic clk, rst_n;
-
-  logic start, done, busy;
-  logic signed [DATA_W-1:0] tb_mat_a [0:ROWS-1][0:K_DIM-1];
-  logic signed [DATA_W-1:0] tb_mat_b [0:K_DIM-1][0:COLS-1];
-  logic signed [ACC_W-1:0]  tb_mat_c [0:ROWS-1][0:COLS-1];
-
-  // Reference Model
-  int signed C_ref [0:ROWS-1][0:COLS-1];
-  int err_cnt;
-
-  // DUT Instantiation
-  systolic_controller_relu #(
-    .DATA_W(DATA_W), 
-    .K_DIM(K_DIM), 
-    .ROWS(ROWS), 
-    .COLS(COLS),
-    .BIAS(BIAS) // Bias 파라미터 전달
-  ) dut (
-    .clk        (clk),
-    .rst_n      (rst_n),
-
-    // Control Interface
-    .i_start    (start),
-    .o_done     (done),
-    .o_busy     (busy),
-
-    // Data Interface
-    .i_mat_a    (tb_mat_a),
-    .i_mat_b    (tb_mat_b),
-    .o_mat_c    (tb_mat_c)
-  );
-
-  // Clock Gen
-  initial begin
-    clk = 0;
-    forever #5 clk = ~clk;
-  end
-
-  initial begin
-    rst_n = 0;
-    start = 0;
-    tb_mat_a  = '{default:0};
-    tb_mat_b  = '{default:0};
-
-    #20 rst_n = 1;
-
-    $display("=== Controller Verification with ReLU (Bias=%0d) ===", BIAS);
-
-    for (int iter = 0; iter < 5; iter++) begin
-
-      // 1. Data Setup (Random)
-      //    TB에서는 그냥 평범한 행렬 모양으로 넣으면 됨 (Skew 불필요)
-      for(int r=0; r<ROWS; r++)
-        for(int k=0; k<K_DIM; k++) 
-        tb_mat_a[r][k] = $urandom_range(-(1 << (DATA_W-1)), (1 << (DATA_W-1)) - 1);
-
-
-      for(int k=0; k<K_DIM; k++)
-        for(int c=0; c<COLS; c++) 
-          tb_mat_b[k][c] = $urandom_range(-(1 << (DATA_W-1)), (1 << (DATA_W-1)) - 1);
-
-      // 2. Calculate Reference (ReLU Logic 적용)
-      for(int r=0; r<ROWS; r++) begin
-        for(int c=0; c<COLS; c++) begin
-          int temp_sum;
-          temp_sum = 0;
-
-          // (1) MAC Calculation
-          for(int k=0; k<K_DIM; k++) 
-            temp_sum += tb_mat_a[r][k] * tb_mat_b[k][c];
-
-          // (2) Bias Subtraction
-          temp_sum = temp_sum - BIAS;
-
-          // (3) ReLU (Activation)
-          if (temp_sum < 0) C_ref[r][c] = 0;
-          else              C_ref[r][c] = temp_sum;
-        end
-      end
-
-      // 3. Start Operation
-      @(posedge clk);
-      start = 1;
-      @(posedge clk);
-      start = 0;
-
-      // 4. Wait for Done
-      wait(done == 1);
-
-      // 5. Check Result
-      err_cnt = 0;
-      $display("--------------------------------------------------");
-      $display("[Iter %0d] Checking Result...", iter);
-      for(int r=0; r<ROWS; r++) begin
-        for(int c=0; c<COLS; c++) begin
-          if (tb_mat_c[r][c] !== C_ref[r][c]) begin
-             $display("ERROR! [%0d][%0d]: DUT=%0d, REF=%0d", r, c, tb_mat_c[r][c], C_ref[r][c]);
-             err_cnt++;
-          end else begin
-             // 0이 나오면 ReLU가 동작하여 값을 죽인 것
-             if (tb_mat_c[r][c] == 0)
-               $display("PASS!  [%0d][%0d]: DUT=%0d (ReLU Activated)", r, c, tb_mat_c[r][c]);
-             else
-               $display("PASS!  [%0d][%0d]: DUT=%0d", r, c, tb_mat_c[r][c]);
+        
+          always_comb begin
+            next_state = state;
+            case (state)
+              IDLE: begin
+                if (i_start) next_state = RUN;
+              end
+              RUN: begin
+                if (cnt >= CALC_CYCLES) next_state = DONE_STATE;
+              end
+              DONE_STATE: begin
+                if (!i_start) next_state = IDLE;
+              end
+            endcase
           end
-        end
-      end
+        
+          // Output Assignments
+          assign o_busy   = (state == RUN);
+          assign o_done   = (state == DONE_STATE);
+        
+          // Array Control Signals
+          assign array_en = (state == RUN);
+        
+          // IDLE 상태에서 start가 들어오는 순간 Clear 수행 (Accumulator 초기화)
+          // 이렇게 하면 PE 내부의 acc_sum이 0으로 리셋되고 새 연산을 시작합니다.
+          assign array_clr = (state == IDLE) && i_start;
+        
+          //==========================================================
+          // 3. Input Buffer Latching
+          //==========================================================
+          // 연산 도중 입력값이 바뀌어도 내부 연산이 꼬이지 않도록 캡처
+          always_ff @(posedge clk) begin
+            if (state == IDLE && i_start) begin
+              latched_mat_a <= i_mat_a;
+              latched_mat_b <= i_mat_b;
+            end
+          end
+        
+          //==========================================================
+          // 4. Data Skewing Logic
+          //==========================================================
+          genvar r, c;
+          generate
+            // Row Input Control (Matrix A -> Row Input)
+            for (r = 0; r < ROWS; r++) begin : GEN_SKEW_A
+              always_comb begin
+                array_a_in[r] = '0; // Default 0 padding
+                if (state == RUN) begin
+                  // Timing Logic: time(cnt) - row_index(r) = col_index(k)
+                  int k;
+                  k = cnt - r;
+                  if (k >= 0 && k < K_DIM) begin
+                    array_a_in[r] = latched_mat_a[r][k];
+                  end
+                end
+              end
+            end
+        
+            // Column Input Control (Matrix B -> Col Input)
+            for (c = 0; c < COLS; c++) begin : GEN_SKEW_B
+              always_comb begin
+                array_b_in[c] = '0; // Default 0 padding
+                if (state == RUN) begin
+                  // Timing Logic: time(cnt) - col_index(c) = row_index(k)
+                  int k;
+                  k = cnt - c;
+                  if (k >= 0 && k < K_DIM) begin
+                    array_b_in[c] = latched_mat_b[k][c];
+                  end
+                end
+              end
+            end
+          endgenerate
+        
+          //==========================================================
+          // 5. Systolic Array Instantiation
+          //==========================================================
+          systolic_array_2d #(
+            .DATA_W (DATA_W),
+            .ACC_W  (ACC_W),
+            .ROWS   (ROWS),
+            .COLS   (COLS)
+          ) u_core_array (
+            .clk        (clk),
+            .rst_n      (rst_n),
+            .clr        (array_clr),
+            .en         (array_en),
+            .a_in_row   (array_a_in),
+            .b_in_col   (array_b_in),
+            .pe_mul     (),
+            .pe_acc_sum (raw_acc_sum) // [주의] 최종 출력이 아니라 내부 와이어로 연결
+          );
+          //==========================================================
+          // [NEW] 6. Post-Processing Unit (ReLU + Bias)
+          //==========================================================
+          generate
+            for (r = 0; r < ROWS; r++) begin : GEN_PPU_ROW
+              for (c = 0; c < COLS; c++) begin : GEN_PPU_COL
+        
+                always_comb begin
+                  // 1. Bias Subtraction (Signed 연산)
+                  //    값이 작으면 음수가 될 수 있으므로 int(32bit)로 변환하여 계산
+                  int temp_val;
+        
+                  temp_val = int'(raw_acc_sum[r][c]) - BIAS;
+        
+                  // 2. ReLU (Rectified Linear Unit)
+                  //    0보다 작으면 0(Dead), 아니면 그대로 통과
+                  if (temp_val < 0) begin
+                    o_mat_c[r][c] = '0; // Deactivate (Output 0)
+                  end else begin
+                    o_mat_c[r][c] = temp_val[ACC_W-1:0]; // Activate (Pass)
+                  end
+                end
+        
+              end
+            end
+          endgenerate
+        
+        endmodule
 
-      if (err_cnt == 0) $display("[Iter %0d] FINAL RESULT: PASS!", iter);
-      else              $display("[Iter %0d] FINAL RESULT: FAIL! (%0d errors)", iter, err_cnt);
-      $display("--------------------------------------------------");
+### TB
 
-      // 6. Wait a bit before next run
-      @(posedge clk);
-    end
+        //[5] systolic_array_2d + controller + Activation(ReLu)
+        
+        `timescale 1ns/1ps
+        
+        module tb_systolic_controller_relu;
+        
+          parameter int DATA_W = 8;
+          parameter int K_DIM  = 2;
+          parameter int ROWS   = 2;
+          parameter int COLS   = 2;
+        
+          // [설정] Bias를 50으로 설정 (행렬 곱 결과가 50보다 작으면 0이 됨)
+          // 랜덤 입력이 보통 15*15=225 근처이므로, 일부 값은 0이 될 수 있음
+          parameter int BIAS   = 50; 
+        
+          parameter int ACC_W  = 2*DATA_W + $clog2(K_DIM);
+        
+          logic clk, rst_n;
+        
+          logic start, done, busy;
+          logic signed [DATA_W-1:0] tb_mat_a [0:ROWS-1][0:K_DIM-1];
+          logic signed [DATA_W-1:0] tb_mat_b [0:K_DIM-1][0:COLS-1];
+          logic signed [ACC_W-1:0]  tb_mat_c [0:ROWS-1][0:COLS-1];
+        
+          // Reference Model
+          int signed C_ref [0:ROWS-1][0:COLS-1];
+          int err_cnt;
+        
+          // DUT Instantiation
+          systolic_controller_relu #(
+            .DATA_W(DATA_W), 
+            .K_DIM(K_DIM), 
+            .ROWS(ROWS), 
+            .COLS(COLS),
+            .BIAS(BIAS) // Bias 파라미터 전달
+          ) dut (
+            .clk        (clk),
+            .rst_n      (rst_n),
+        
+            // Control Interface
+            .i_start    (start),
+            .o_done     (done),
+            .o_busy     (busy),
+        
+            // Data Interface
+            .i_mat_a    (tb_mat_a),
+            .i_mat_b    (tb_mat_b),
+            .o_mat_c    (tb_mat_c)
+          );
+        
+          // Clock Gen
+          initial begin
+            clk = 0;
+            forever #5 clk = ~clk;
+          end
+        
+          initial begin
+            rst_n = 0;
+            start = 0;
+            tb_mat_a  = '{default:0};
+            tb_mat_b  = '{default:0};
+        
+            #20 rst_n = 1;
+        
+            $display("=== Controller Verification with ReLU (Bias=%0d) ===", BIAS);
+        
+            for (int iter = 0; iter < 5; iter++) begin
+        
+              // 1. Data Setup (Random)
+              //    TB에서는 그냥 평범한 행렬 모양으로 넣으면 됨 (Skew 불필요)
+              for(int r=0; r<ROWS; r++)
+                for(int k=0; k<K_DIM; k++) 
+                tb_mat_a[r][k] = $urandom_range(-(1 << (DATA_W-1)), (1 << (DATA_W-1)) - 1);
+        
+        
+              for(int k=0; k<K_DIM; k++)
+                for(int c=0; c<COLS; c++) 
+                  tb_mat_b[k][c] = $urandom_range(-(1 << (DATA_W-1)), (1 << (DATA_W-1)) - 1);
+        
+              // 2. Calculate Reference (ReLU Logic 적용)
+              for(int r=0; r<ROWS; r++) begin
+                for(int c=0; c<COLS; c++) begin
+                  int temp_sum;
+                  temp_sum = 0;
+        
+                  // (1) MAC Calculation
+                  for(int k=0; k<K_DIM; k++) 
+                    temp_sum += tb_mat_a[r][k] * tb_mat_b[k][c];
+        
+                  // (2) Bias Subtraction
+                  temp_sum = temp_sum - BIAS;
+        
+                  // (3) ReLU (Activation)
+                  if (temp_sum < 0) C_ref[r][c] = 0;
+                  else              C_ref[r][c] = temp_sum;
+                end
+              end
+        
+              // 3. Start Operation
+              @(posedge clk);
+              start = 1;
+              @(posedge clk);
+              start = 0;
+        
+              // 4. Wait for Done
+              wait(done == 1);
+        
+              // 5. Check Result
+              err_cnt = 0;
+              $display("--------------------------------------------------");
+              $display("[Iter %0d] Checking Result...", iter);
+              for(int r=0; r<ROWS; r++) begin
+                for(int c=0; c<COLS; c++) begin
+                  if (tb_mat_c[r][c] !== C_ref[r][c]) begin
+                     $display("ERROR! [%0d][%0d]: DUT=%0d, REF=%0d", r, c, tb_mat_c[r][c], C_ref[r][c]);
+                     err_cnt++;
+                  end else begin
+                     // 0이 나오면 ReLU가 동작하여 값을 죽인 것
+                     if (tb_mat_c[r][c] == 0)
+                       $display("PASS!  [%0d][%0d]: DUT=%0d (ReLU Activated)", r, c, tb_mat_c[r][c]);
+                     else
+                       $display("PASS!  [%0d][%0d]: DUT=%0d", r, c, tb_mat_c[r][c]);
+                  end
+                end
+              end
+        
+              if (err_cnt == 0) $display("[Iter %0d] FINAL RESULT: PASS!", iter);
+              else              $display("[Iter %0d] FINAL RESULT: FAIL! (%0d errors)", iter, err_cnt);
+              $display("--------------------------------------------------");
+        
+              // 6. Wait a bit before next run
+              @(posedge clk);
+            end
+        
+            $display("=== All Tests Finished ===");
+            $finish;
+          end
+        
+        endmodule
 
-    $display("=== All Tests Finished ===");
-    $finish;
-  end
+### Simulation Result
 
-endmodule
-Simulation Result
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_78.png" width="400"/>
 
+<div align="left">
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_79.png" width="400"/>
 
-Check Point !!
+<div align="left">
 
-- Bias Subtraction & ReLU:
+<mark>Check Point !!</mark>
 
-Systolic array의 MAC 결과(raw_acc_sum)에 대해 bias subtraction 및 ReLU를 적용합니다.
+- Bias Subtraction & ReLU : Systolic array의 MAC 결과(raw_acc_sum)에 대해 bias subtraction 및 ReLU를 적용합니다. BIAS는 activation 이전에 적용되는 threshold(문턱값) 역할을 하며, MAC 결과에서 해당 값을 subtract한 뒤 ReLU를 수행합니다. 이때 subtraction 결과는 음수가 될 수 있고 bit growth가 발생할 수 있으므로, 중간 연산은 int로 확장하여 signed 산술을 안정적으로 처리합니다.
 
-BIAS는 activation 이전에 적용되는 threshold(문턱값) 역할을 하며, MAC 결과에서 해당 값을 subtract한 뒤 ReLU를 수행합니다.
+​    즉, 최종 출력은 다음과 같은 형태로 계산됩니다. y=max(0, raw_acc_sum−BIAS) 이를 통해 연산 결과가 BIAS보다 작은 경우에는 noise로 간주하여 0으로 제거하고, 충분히 큰 값만 활성화되도록 합니다. 또한 ReLU 이후 양수 값은 ACC_W 비트 폭으로 출력되며(temp_val[ACC_W-1:0]), ACC_W를 초과하는 상위 비트는 절단됩니다. 
 
-​
+​    본 방식은 학습된 bias를 더하는 전통적인 형태와는 달리, 출력 분포의 하한을 제어하는 threshold-based ReLU로 동작합니다. 이와 같이 OS(Output-Stationary) 기반 Systolic Array를 구현해 보았습니다. 본 테스트에서는 2×2 구조를 기준으로 검증을 수행하였으나, 설계는 parameterized 되어 있으므로 4×4, 5×5, 10×10 등 다양한 크기로 확장이 가능합니다.
 
-이때 subtraction 결과는 음수가 될 수 있고 bit growth가 발생할 수 있으므로, 중간 연산은 int로 확장하여 signed 산술을 안정적으로 처리합니다.
-
-​
-
-즉, 최종 출력은 다음과 같은 형태로 계산됩니다.
-
-y=max(0, raw_acc_sum−BIAS)
-
-이를 통해 연산 결과가 BIAS보다 작은 경우에는 noise로 간주하여 0으로 제거하고, 충분히 큰 값만 활성화되도록 합니다. 
-
-또한 ReLU 이후 양수 값은 ACC_W 비트 폭으로 출력되며(temp_val[ACC_W-1:0]), ACC_W를 초과하는 상위 비트는 절단됩니다. 
-
-​
-
-본 방식은 학습된 bias를 더하는 전통적인 형태와는 달리, 출력 분포의 하한을 제어하는 threshold-based ReLU로 동작합니다.
-
-이와 같이 OS(Output-Stationary) 기반 Systolic Array를 구현해 보았습니다.
-
-​
-
-본 테스트에서는 2×2 구조를 기준으로 검증을 수행하였으나, 
-
-설계는 parameterized 되어 있으므로 4×4, 5×5, 10×10 등 다양한 크기로 확장이 가능합니다.
-
-​
-
-그렇다면 어디까지 확장하는 것이 적절한가에 대한 고민이 필요합니다.
-
-​
-
-현재 스터디에서는 4×4 array를 표준으로 사용하고 있으나, 이는 절대적인 기준은 아니며 다양한 대안을 함께 고려할 수 있습니다.
-
-​
-
-아래는 array size를 결정할 때 고려해볼 수 있는 주요 관점들입니다.
-
-​
+​    그렇다면 어디까지 확장하는 것이 적절한가에 대한 고민이 필요합니다. 현재 스터디에서는 4×4 array를 표준으로 사용하고 있으나, 이는 절대적인 기준은 아니며 다양한 대안을 함께 고려할 수 있습니다. 아래는 array size를 결정할 때 고려해볼 수 있는 주요 관점들입니다.
 
 - 각 Layer 에서 연산할때의 효율은?
 
