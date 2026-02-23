@@ -584,219 +584,166 @@ Layer 1의 연산 결과는 Golden value와 동일함을 확인했으나. 여전
 
 ​이를 해결하기 위해 debug point의 기준을 단순히 k_cnt 구간에 고정하지 않고, latency를 고려한 “유효 연산 구간”과 “flush 구간”을 함께 포함하도록 수정하였습니다.
 
-​구체적으로 state 전이 직후에도 pipeline에 남아 있는 결과를 확인할 수 있도록, 마지막 MAC 이후 FLUSH_CYC만큼 추가로 snapshot을 출력하여 acc(LAT1) 및 Activation_Unit output(LAT2)까지 확인 가능하도록 보강하였습니다.
+​구체적으로 state 전이 직후에도 pipeline에 남아 있는 결과를 확인할 수 있도록, 마지막 MAC 이후 FLUSH_CYC만큼 추가로 snapshot을 출력하여 acc(LAT1) 및 Activation_Unit output(LAT2)까지 확인 가능하도록 보강하였습니다.(최종 TB 코드 참고)
 
-(** 최종 TB 코드 참고)
+​(해당 TB 설계 시에는 simulation 결과를 기반으로 2-cycle flush를 임의로 적용하였으며, 추후 이론적인 latency 분석을 통해 이에 대한 검증이 필요합니다.)
 
-​(** 해당 TB 설계 시에는 simulation 결과를 기반으로 2-cycle flush를 임의로 적용하였으며, 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_91.png" width="400"/>
 
-추후 이론적인 latency 분석을 통해 이에 대한 검증이 필요합니다.)
+<div align="left">
 
-​
+### Proposed Model - 5th Simulation
 
+앞서 설계한 TB를 Layer 2와 Layer 3에 대한 debug monitor까지 확장하였습니다. 그 결과, L2와 L3 모두에서 weight의 첫 번째 값이 X로 출력되며, 이로 인해 전체 output에 영향을 미치고 있음을 확인하였습니다.
 
-
-​
-
-Proposed Model - 5th Simulation
-
-앞서 설계한 TB를 Layer 2와 Layer 3에 대한 debug monitor까지 확장하였습니다.
-
-그 결과, L2와 L3 모두에서 weight의 첫 번째 값이 X로 출력되며, 이로 인해 전체 output에 영향을 미치고 있음을 확인하였습니다.
-
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_92.png" width="400"/>
 
 Layer 2
 
+<div align="left">
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_93.png" width="400"/>
 
 Layer 3
 
-연산 흐름을 분석한 결과, Layer 2와 Layer 3의 input은 모두 Layer 1의 연산 output임을 확인하였으며,
+<div align="left">
 
-해당 문제는 각 layer의 연산 결과를 저장하는 Global_Buffer와 관련된 부분에서 발생한 것으로 판단했습니다.
+연산 흐름을 분석한 결과, Layer 2와 Layer 3의 input은 모두 Layer 1의 연산 output임을 확인하였으며, 해당 문제는 각 layer의 연산 결과를 저장하는 Global_Buffer와 관련된 부분에서 발생한 것으로 판단했습니다.
 
-​
-
-다시 DUT 내부 FSM을 살펴보면, BUFFER_WR_L1(=2), BUFFER_WR_L2(=4), BUFFER_WR_L3(=6) state는 
-
-각 layer의 연산 결과를 Global_Buffer에 write하는 단계입니다.
+​다시 DUT 내부 FSM을 살펴보면, BUFFER_WR_L1(=2), BUFFER_WR_L2(=4), BUFFER_WR_L3(=6) state는 각 layer의 연산 결과를 Global_Buffer에 write하는 단계입니다.
 
 ​
 
-<NPU_Top.sv>
+### NPU_Top.sv
 
-                BUFFER_WR_L1: begin
-                    // Layer1 결과를 Global_Buffer에 저장하는 단계
-                    // - write_seq_cnt = 1..16 동안, (img 0..3) x (neuron_in_group 0..3) = 16개 결과를 순차 저장
-                    // - wr_img_idx / wr_neu_idx는 write_seq_cnt-1 기준으로 계산되어 write 주소를 결정
-                    // - wr_global_neuron_idx = group_cnt*4 + wr_neu_idx (현재 neuron group의 전역 neuron index)
-                    // - cur_neuron_total을 초과하는 neuron index는 저장 스킵 (마지막 group 처리)
-                    // - write_seq_cnt == 16이면:
-                    //   · 마지막 group이면 다음 레이어(CALC_L2)로 전이 및 파라미터 갱신
-                    //   · 아니면 group_cnt++ 후 다시 CALC_L1로 돌아가 다음 neuron group 계산
-                    if (write_seq_cnt > 0 && write_seq_cnt <= 16) begin
-                        if (wr_global_neuron_idx < cur_neuron_total) begin 
-                            // WRITE TO BUFFER 1
-                            buf_wen <= 1;
-                            buf_w_addr <= (wr_img_idx * 32) + wr_global_neuron_idx;
-                            buf_w_data <= act_out_val; 
+                        BUFFER_WR_L1: begin
+                            // Layer1 결과를 Global_Buffer에 저장하는 단계
+                            // - write_seq_cnt = 1..16 동안, (img 0..3) x (neuron_in_group 0..3) = 16개 결과를 순차 저장
+                            // - wr_img_idx / wr_neu_idx는 write_seq_cnt-1 기준으로 계산되어 write 주소를 결정
+                            // - wr_global_neuron_idx = group_cnt*4 + wr_neu_idx (현재 neuron group의 전역 neuron index)
+                            // - cur_neuron_total을 초과하는 neuron index는 저장 스킵 (마지막 group 처리)
+                            // - write_seq_cnt == 16이면:
+                            //   · 마지막 group이면 다음 레이어(CALC_L2)로 전이 및 파라미터 갱신
+                            //   · 아니면 group_cnt++ 후 다시 CALC_L1로 돌아가 다음 neuron group 계산
+                            if (write_seq_cnt > 0 && write_seq_cnt <= 16) begin
+                                if (wr_global_neuron_idx < cur_neuron_total) begin 
+                                    // WRITE TO BUFFER 1
+                                    buf_wen <= 1;
+                                    buf_w_addr <= (wr_img_idx * 32) + wr_global_neuron_idx;
+                                    buf_w_data <= act_out_val; 
+                                end
+                            end
+        
+                            if (write_seq_cnt == 16) begin
+                                if ((group_cnt + 1) * 4 >= cur_neuron_total) begin
+                                    state <= CALC_L2;
+                                    cur_layer_num <= 2;
+                                    cur_input_len <= `numNeuronLayer1; 
+                                    cur_neuron_total <= `numNeuronLayer2; 
+                                    cur_act_sel <= 0; 
+                                    group_cnt <= 0;
+                                    k_cnt <= 0;
+                                    pe_rst <= 1;
+                                end else begin
+                                    state <= CALC_L1;
+                                    group_cnt <= group_cnt + 1;
+                                    k_cnt <= 0;
+                                    pe_rst <= 1;
+                                end
+                                write_seq_cnt <= 0;
+                            end else begin
+                                write_seq_cnt <= write_seq_cnt + 1;
+                            end
                         end
-                    end
+                
+해당 state에서는 write_seq_cnt를 1..16까지 증가시키며, (img 0..3) × (neuron_in_group 0..3)에 해당하는 총 16개의 activation output (이전 state의 output)을 순차적으로 저장합니다.
 
-                    if (write_seq_cnt == 16) begin
-                        if ((group_cnt + 1) * 4 >= cur_neuron_total) begin
-                            state <= CALC_L2;
-                            cur_layer_num <= 2;
-                            cur_input_len <= `numNeuronLayer1; 
-                            cur_neuron_total <= `numNeuronLayer2; 
-                            cur_act_sel <= 0; 
-                            group_cnt <= 0;
-                            k_cnt <= 0;
-                            pe_rst <= 1;
-                        end else begin
-                            state <= CALC_L1;
-                            group_cnt <= group_cnt + 1;
-                            k_cnt <= 0;
-                            pe_rst <= 1;
-                        end
-                        write_seq_cnt <= 0;
-                    end else begin
-                        write_seq_cnt <= write_seq_cnt + 1;
-                    end
-                end
-해당 state에서는 write_seq_cnt를 1..16까지 증가시키며, (img 0..3) × (neuron_in_group 0..3)에 해당하는 
+​이때 write address는 write_seq_cnt-1를 기준으로 계산된 wr_img_idx와 wr_neu_idx를 사용하여 결정됩니다. wr_neu_idx는 현재 neuron group 내에서의 local index를 의미하며, 이를 wr_global_neuron_idx = group_cnt*4 + wr_neu_idx 형태로 변환함으로써, 전체 layer 기준에서의 global neuron index를 생성합니다.
 
-총 16개의 activation output (이전 state의 output)을 순차적으로 저장합니다.
+​즉, group 단위로 나누어 처리된 neuron 결과를 Global_Buffer 상의 연속된 neuron address 공간에 올바르게 mapping하기 위한 계산입니다.
 
-​
+​또한, 마지막 group에서는 
 
-이때 write address는 write_seq_cnt-1를 기준으로 계산된 wr_img_idx와 wr_neu_idx를 사용하여 결정됩니다.
-
-wr_neu_idx는 현재 neuron group 내에서의 local index를 의미하며, 이를
-
-wr_global_neuron_idx = group_cnt*4 + wr_neu_idx
-형태로 변환함으로써, 전체 layer 기준에서의 global neuron index를 생성합니다.
-
-​
-
-즉, group 단위로 나누어 처리된 neuron 결과를 Global_Buffer 상의 연속된 neuron address 공간에 올바르게 mapping하기 위한 
-
-계산입니다.
-
-​
-
-또한, 마지막 group에서는 
-
-wr_global_neuron_idx < cur_neuron_total
-조건을 통해 neuron 개수를 초과하는 항목에 대해서는 write를 수행하지 않도록 처리합니다.
-
-​
+        wr_global_neuron_idx < cur_neuron_total
+        
+조건을 통해 neuron 개수를 초과하는 항목에 대해서는 write를 수행하지 않도록 처리합니다.​
 
 유효한 neuron index에 대해서만 buf_wen을 assert하며, buf_w_addr 주소에 data를 저장하게 됩니다.
 
-buf_w_addr = (wr_img_idx * 32) + wr_global_neuron_idx
-buf_w_data = act_out_val
+        buf_w_addr = (wr_img_idx * 32) + wr_global_neuron_idx
+        buf_w_data = act_out_val
 ​
-
 즉, 각 sample(img)별로 neuron output이 Global_Buffer 상에서 연속된 address 공간에 저장되도록 구성되어 있습니다.
 
 write_seq_cnt == 16이 되면, 현재 group이 마지막 group인지 여부를 
 
-(group_cnt + 1) * 4 >= cur_neuron_total
+        (group_cnt + 1) * 4 >= cur_neuron_total
+
 조건으로 판단합니다. 
 
-​
+마지막 group인 경우에는 다음 layer의 계산 state(CALC_L2, CALC_L3 등)로 전이하면서, cur_layer_num, cur_input_len, cur_neuron_total, cur_act_sel을 다음 layer에 맞게 갱신하고, group_cnt와 k_cnt를 초기화한 뒤 pe_rst를 assert하여 다음 연산을 준비합니다.
 
-마지막 group인 경우에는 다음 layer의 계산 state(CALC_L2, CALC_L3 등)로 전이하면서,
+​반대로 마지막 group이 아닌 경우에는 group_cnt를 증가시킨 후 동일 layer의 계산 state로 복귀하여, 다음 neuron group에 대한 연산을 계속 수행합니다.
 
-cur_layer_num, cur_input_len, cur_neuron_total, cur_act_sel을 다음 layer에 맞게 갱신하고,
+각 layer의 연산 결과는 BUFFER_WR_Lx state에서 Global_Buffer의 memory address 공간에 저장됩니다. 초기 구현에서는 Layer 1과 Layer 2가 동일한 address 영역을 사용하도록 되어 있어, layer 간 결과가 overwrite되거나 이후 연산에서 잘못된 값을 read하는 문제가 발생하였습니다. 
 
-group_cnt와 k_cnt를 초기화한 뒤 pe_rst를 assert하여 다음 연산을 준비합니다.
+​이를 방지하기 위해 BUFFER_WR_L2에서는 Layer 2의 저장 address에 +128 offset을 적용하여, Layer 2 결과를 Global_Buffer의 상위 영역(128~)에 저장하도록 수정하였습니다.
 
-​
+### NPU_Top.sv
 
-반대로 마지막 group이 아닌 경우에는 group_cnt를 증가시킨 후 동일 layer의 계산 state로 복귀하여,
-
-다음 neuron group에 대한 연산을 계속 수행합니다.
-
-각 layer의 연산 결과는 BUFFER_WR_Lx state에서 Global_Buffer의 memory address 공간에 저장됩니다.
-
-​
-
-초기 구현에서는 Layer 1과 Layer 2가 동일한 address 영역을 사용하도록 되어 있어, 
-
-layer 간 결과가 overwrite되거나 이후 연산에서 잘못된 값을 read하는 문제가 발생하였습니다. 
-
-​
-
-이를 방지하기 위해 BUFFER_WR_L2에서는 Layer 2의 저장 address에 +128 offset을 적용하여, 
-
-Layer 2 결과를 Global_Buffer의 상위 영역(128~)에 저장하도록 수정하였습니다.
-
-​
-
-<NPU_Top.sv>
-
-                BUFFER_WR_L2: begin
-                    if (write_seq_cnt > 0 && write_seq_cnt <= 16) begin
-                        if (wr_global_neuron_idx < cur_neuron_total) begin
-                            // WRITE TO BUFFER 2
-                            buf_wen <= 1;
-                            // Original:
-                            // buf_w_addr <= (wr_img_idx * 32) + wr_global_neuron_idx;
-                            buf_w_addr <= (wr_img_idx * 32) + wr_global_neuron_idx + 128; 
-                            //
-                            // [Debug / Temporary Fix]
-                            // - L2 결과가 기존에 addr=0부터 저장되면서,
-                            //   이후 L3 연산 시 L1/L3 결과 영역과 충돌하여 X가 발생함
-                            // - 이를 분리하기 위해 L2 결과를 Global_Buffer의 상위 영역(128~)에 저장
-                            // - offset(+128)을 적용하여 L2 결과가 L3에서 사용되는 base=0 영역과 겹치지 않도록 함
-                            //
-                            // NOTE:
-                            // - 현재는 디버깅을 위해 offset을 하드코딩한 상태
-                            // - 이후 ping-pong buffering 구조(buf_rd_base / buf_wr_base)로 정리 필요
-
-                            buf_w_data <= act_out_val;
+                        BUFFER_WR_L2: begin
+                            if (write_seq_cnt > 0 && write_seq_cnt <= 16) begin
+                                if (wr_global_neuron_idx < cur_neuron_total) begin
+                                    // WRITE TO BUFFER 2
+                                    buf_wen <= 1;
+                                    // Original:
+                                    // buf_w_addr <= (wr_img_idx * 32) + wr_global_neuron_idx;
+                                    buf_w_addr <= (wr_img_idx * 32) + wr_global_neuron_idx + 128; 
+                                    //
+                                    // [Debug / Temporary Fix]
+                                    // - L2 결과가 기존에 addr=0부터 저장되면서,
+                                    //   이후 L3 연산 시 L1/L3 결과 영역과 충돌하여 X가 발생함
+                                    // - 이를 분리하기 위해 L2 결과를 Global_Buffer의 상위 영역(128~)에 저장
+                                    // - offset(+128)을 적용하여 L2 결과가 L3에서 사용되는 base=0 영역과 겹치지 않도록 함
+                                    //
+                                    // NOTE:
+                                    // - 현재는 디버깅을 위해 offset을 하드코딩한 상태
+                                    // - 이후 ping-pong buffering 구조(buf_rd_base / buf_wr_base)로 정리 필요
+        
+                                    buf_w_data <= act_out_val;
+                                end
+                            end
+        
+                            if (write_seq_cnt == 16) begin
+                                if ((group_cnt + 1) * 4 >= cur_neuron_total) begin
+                                    state <= CALC_L3;
+                                    cur_layer_num <= 3;
+                                    cur_input_len <= `numNeuronLayer2; 
+                                    cur_neuron_total <= `numNeuronLayer3; 
+                                    cur_act_sel <= 0; 
+                                    group_cnt <= 0;
+                                    k_cnt <= 0;
+                                    pe_rst <= 1;
+                                end else begin
+                                    state <= CALC_L2;
+                                    group_cnt <= group_cnt + 1;
+                                    k_cnt <= 0;
+                                    pe_rst <= 1;
+                                end
+                                write_seq_cnt <= 0;
+                            end else begin
+                                write_seq_cnt <= write_seq_cnt + 1;
+                            end
                         end
-                    end
 
-                    if (write_seq_cnt == 16) begin
-                        if ((group_cnt + 1) * 4 >= cur_neuron_total) begin
-                            state <= CALC_L3;
-                            cur_layer_num <= 3;
-                            cur_input_len <= `numNeuronLayer2; 
-                            cur_neuron_total <= `numNeuronLayer3; 
-                            cur_act_sel <= 0; 
-                            group_cnt <= 0;
-                            k_cnt <= 0;
-                            pe_rst <= 1;
-                        end else begin
-                            state <= CALC_L2;
-                            group_cnt <= group_cnt + 1;
-                            k_cnt <= 0;
-                            pe_rst <= 1;
-                        end
-                        write_seq_cnt <= 0;
-                    end else begin
-                        write_seq_cnt <= write_seq_cnt + 1;
-                    end
-                end
-또한 Layer 3 연산 시에는 Layer 2 결과가 저장된 영역을 read해야 하므로, 
+또한 Layer 3 연산 시에는 Layer 2 결과가 저장된 영역을 read해야 하므로, CALC_L3 state에서만 read address에 동일한 +128 offset을 적용하도록 분기 처리하였습니다.(현재 offset 적용은 layer 간 결과 충돌을 회피하기 위한 임시 조치이며, 향후에는 Global_Buffer를 read 영역과 write 영역으로 분리한 ping-pong buffering 구조를 도입하여, layer 전이 시 buffer 역할을 교대함으로써 address 충돌을 구조적으로 방지할 계획입니다.)
 
-CALC_L3 state에서만 read address에 동일한 +128 offset을 적용하도록 분기 처리하였습니다.
-
-(** 현재 offset 적용은 layer 간 결과 충돌을 회피하기 위한 임시 조치이며,
-
-향후에는 Global_Buffer를 read 영역과 write 영역으로 분리한 ping-pong buffering 구조를 도입하여,
-
-layer 전이 시 buffer 역할을 교대함으로써 address 충돌을 구조적으로 방지할 계획입니다.)
-
-    assign buf_r_addr[0] = (state == CALC_L3) ? (0 * 32) + k_cnt + 128 : (0 * 32) + k_cnt;
-    assign buf_r_addr[1] = (state == CALC_L3) ? (1 * 32) + k_cnt + 128 : (1 * 32) + k_cnt;
-    assign buf_r_addr[2] = (state == CALC_L3) ? (2 * 32) + k_cnt + 128 : (2 * 32) + k_cnt;
-    assign buf_r_addr[3] = (state == CALC_L3) ? (3 * 32) + k_cnt + 128 : (3 * 32) + k_cnt;
+        assign buf_r_addr[0] = (state == CALC_L3) ? (0 * 32) + k_cnt + 128 : (0 * 32) + k_cnt;
+        assign buf_r_addr[1] = (state == CALC_L3) ? (1 * 32) + k_cnt + 128 : (1 * 32) + k_cnt;
+        assign buf_r_addr[2] = (state == CALC_L3) ? (2 * 32) + k_cnt + 128 : (2 * 32) + k_cnt;
+        assign buf_r_addr[3] = (state == CALC_L3) ? (3 * 32) + k_cnt + 128 : (3 * 32) + k_cnt;
 ​
-
-Proposed Model - 6th Simulation
+### Proposed Model - 6th Simulation
 
 5차 simulation 이후, 예상과 같이 Layer 2의 output이 정상적으로 Layer 3의 input으로 전달되는 것을 확인하였습니다.
 
