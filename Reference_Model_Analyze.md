@@ -180,6 +180,7 @@ Testbench는 interrupt 기반으로 결과 준비 완료를 판단합니다.
 intr가 발생하면 다음을 수행합니다.
 
 readAxi(8);
+
 →  AXI-Lite를 통해 Result register read
 → 결과는 axiRdData에 저장
 
@@ -187,6 +188,7 @@ readAxi(8);
 
 if (axiRdData == expected)
     right++;
+    
 → 정답 여부를 비교하여 accuracy를 누적합니다.
 
 ### 10. 반복 수행
