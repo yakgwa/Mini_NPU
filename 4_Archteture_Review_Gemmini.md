@@ -8,18 +8,19 @@ Gemmini​
 
 <div align="left">
 
-Gemmini는 DNN accelerator를 독립적인 연산 블록으로 보지 않고, system과 software stack의 일부로 다룹니다. 
+### Gemmini
 
-​
+Gemmini는 DNN accelerator를 독립적인 연산 블록으로 보지 않고, system과 software stack의 일부로 다룹니다. 
 
 이를 통해 accelerator와 system, software 간의 상호작용이 DNN 성능에 미치는 영향을 분석할 수 있도록 설계된 플랫폼입니다
 
-​
+​Gemmini는 Chisel HDL을 사용해 개발되었습니다.
 
-Gemmini는 Chisel HDL을 사용해 개발되었습니다.
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_40.png" width="100"/>
 
+<div align="left">
 
-Architecture
+### Architecture
 
 Gemmini는 RoCC (Rocket Custom Coprocessor) accelerator로 구현되며,
 
