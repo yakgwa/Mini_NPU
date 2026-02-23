@@ -95,17 +95,18 @@ Reference Model의 입력은 784개의 픽셀 데이터(숫자 이미지 1장)�
 <mark>** 1×4 Array에서 확인해야 할 사항</mark>
 
 Q1. Input과 Weight의 구성
+
     Batch Size를 1로 가정하면, 입력 데이터는 1 × 784 크기의 입력 벡터 1개로 구성되며, 입력 요소 a_0, a_1, ~ a_783은 매 cycle마다 serial 하게 입력됩니다. Weight Matrix은 784 × 30이며 (Output Feature = 30, Input Dimension = 784), 1 × 4 Array 구조에서는 한 번에 4개의 Output Feature만 처리할 수 있습니다.
 
-​따라서 전체 30개의 Output Feature를 계산하기 위해 Weight Matrix를 Column 단위로 분할하여 총 8회의 Tile 연산을 순차적으로 수행합니다.
+​    따라서 전체 30개의 Output Feature를 계산하기 위해 Weight Matrix를 Column 단위로 분할하여 총 8회의 Tile 연산을 순차적으로 수행합니다.
 
 ​Q2. 1 × 4 Array 구조는 WS 인가, OS 인가?
+
     Input과 Weight가 매 cycle마다 PE에 공급되는 형태만 보면 Output Stationary(OS) 구조로 오해하기 쉽습니다. 그러나 아키텍처 관점에서는 Weight Stationary(WS)로 분류하는 것이 타당합니다.
 
-그 이유는 다음과 같습니다. 각 PE는 Weight Matrix의 특정 column을 전담하며 해당 Weight는 PE 간에 전달되거나 이동하지 않습니다. Input 데이터만이 Systolic 하게 PE를 따라 흐르며 연산을 수행합니다.
-
+    그 이유는 다음과 같습니다. 각 PE는 Weight Matrix의 특정 column을 전담하며 해당 Weight는 PE 간에 전달되거나 이동하지 않습니다. Input 데이터만이 Systolic 하게 PE를 따라 흐르며 연산을 수행합니다.
 ​
-Batch Size = 1 환경에서는 cycle마다 다른 weight 값이 사용되기 때문에 Weight가 이동하는 것처럼 보일 수 있습니다. 그러나 이는 Weight가 흐르는 것이 아니라, 동일한 PE 위치에서 연산 순서에 따라 값이 갱신되는 것입니다. 즉, Weight의 공간적 위치가 고정되어 있다는 점에서 본 구조의 본질은 WS에 해당합니다.
+    Batch Size = 1 환경에서는 cycle마다 다른 weight 값이 사용되기 때문에 Weight가 이동하는 것처럼 보일 수 있습니다. 그러나 이는 Weight가 흐르는 것이 아니라, 동일한 PE 위치에서 연산 순서에 따라 값이 갱신되는 것입니다. 즉, Weight의 공간적 위치가 고정되어 있다는 점에서 본 구조의 본질은 WS에 해당합니다.
 
 ​Q3. Tile 교체 시점과 Pipeline을 활용한 효율 극대화
     마지막 입력 a_783이 주입된 이후에도, Systolic Array의 전파 특성으로 인해 PE 위치에 따라 연산 종료 시점에는 차이가 발생합니다.
