@@ -12,10 +12,6 @@
 
 - 4 x 4 Systolic Array
 
-<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_47.jpg" width="400"/>
-
-<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_58.jpg" width="400"/>
-
 <p align="center">
   <img src="https://raw.githubusercontent.com/yakgwa/Mini_NPU/main/Picture_Data/image_47.jpg" width="400"/>
   <img src="https://raw.githubusercontent.com/yakgwa/Mini_NPU/main/Picture_Data/image_58.jpg" width="400"/>
