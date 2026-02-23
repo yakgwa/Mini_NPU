@@ -6,7 +6,7 @@
 ### Mini NPU 🖍️
 
 [<img src="https://img.shields.io/badge/-readme.md-important?style=flat&logo=google-chrome&logoColor=white" />]() [<img src="https://img.shields.io/badge/release-v1.0.0-ㅎㄱㄷ두?style=flat&logo=google-chrome&logoColor=white" />]() 
-<br/> [<img src="https://img.shields.io/badge/프로젝트 기간-2022.12.10~2022.12.19-fab2ac?style=flat&logo=&logoColor=white" />]()
+<br/> [<img src="https://img.shields.io/badge/프로젝트 기간-2026.02.23~2026.03.03-fab2ac?style=flat&logo=&logoColor=white" />]()
 
 </div> 
 
@@ -24,7 +24,7 @@ Mini NPU Architeture & Design & Verfication
 
 <br />
 
-### Prologue - GPU 시대에 등장한 TPU
+## Prologue - GPU 시대에 등장한 TPU
 최근 몇 년간 AI 시장에서는 NVIDIA의 GPU가 여전히 강세를 보이고 있습니다.
 
 GPU는 딥러닝(Deep-Learning) 계산에 잘 맞도록 계속 발전해 왔고, CUDA라는 개발 환경도 매우 잘 갖춰져 있습니다.
@@ -41,7 +41,7 @@ GPU와 비교했을 때 TPU는 inference workload에 최적화된 연산 구조�
 
 이번 글에서는 TPU 논문을 중심으로, 해당 architecture가 어떤 설계 의도를 가지고 있으며, H/W 구조가 어떻게 구성되어 있는지를 살펴보겠습니다.
 
-### Abstract 
+## Abstract 
 
 많은 컴퓨터 구조 설계자들은 이제 성능과 에너지 효율을 동시에 크게 개선하기 위해서는 범용 프로세서가 아닌 도메인 특화 하드웨어, 즉 이미 학습된 AI 모델을 기반으로 실제 예측을 수행하는 추론 단계에 최적화된 특수 목적 하드웨어가 필요하다고 보고 있습니다.
 
@@ -67,7 +67,7 @@ GPU와 비교했을 때 TPU는 inference workload에 최적화된 연산 구조�
 
 ​그 결과, 일부 application에서의 낮은 자원 활용률에도 불구하고 TPU는 평균적으로 CPU나 GPU 대비 15~30배 빠른 성능을 보였고, 전력 효율(TOPS/Watt) 역시 30~80배 더 높게 나타났습니다.​
 
-### 1. Introduction — Neural Network와  inference환경
+## 1. Introduction — Neural Network와  inference환경
 
 대규모 데이터와 이를 처리할 수 있는 컴퓨팅 인프라는 머신러닝, 특히 Deep Neural Network(DNN)의 발전을 가능하게 했습니다.
 
@@ -139,67 +139,45 @@ Layer 수와 Weight 수를 중심으로 구조를 중점적으로 Check.
 
 <div align="left">
 
-2. TPU Origin, Architecture, Implementation, and Software
+## 2. TPU Origin, Architecture, Implementation, and Software
 
-2.1 TPU의 등장 배경
+### 2.1 TPU의 등장 배경
 
-Google은 2006년부터 데이터센터에 GPU/FPGA/ASIC 도입을 검토했지만, 당시에는 특수 하드웨어가 필요한 workload가 제한적이라
+Google은 2006년부터 데이터센터에 GPU/FPGA/ASIC 도입을 검토했지만, 당시에는 특수 하드웨어가 필요한 workload가 제한적이라 대규모 데이터센터의 미사용 연산 자원으로 사실상 ‘공짜’에 가깝게 처리할 수 있다고 판단했습니다. 하지만 2013년, 음성 검색을 하루 3분만 사용해도 DNN 기반 음성 인식이 데이터센터 연산 수요를 2배로 늘릴 수 있다는 전망이 나오면서, CPU 기반 인프라로는 비용 부담이 급격히 커질 것이 명확해졌습니다.
 
-대규모 데이터센터의 미사용 연산 자원으로 사실상 ‘공짜’에 가깝게 처리할 수 있다고 판단했습니다.
+이에 Google은 추론(inference)용 custom ASIC을 빠르게 개발하는 최우선 프로젝트를 시작했고, 학습(training)은 상용 GPU를 구매해 대응했습니다. 
 
-​
+​목표는 GPU 대비 10배의 cost-performance 개선이었으며, 그 결과 TPU는 설계–검증–제작–데이터센터 배치까지 약 15개월 만에 완료되었습니다.
 
-하지만 2013년, 음성 검색을 하루 3분만 사용해도 DNN 기반 음성 인식이 데이터센터 연산 수요를 2배로 늘릴 수 있다는 전망이 
+​### 2.2 시스템 구성과 설계 방향
 
-나오면서, CPU 기반 인프라로는 비용 부담이 급격히 커질 것이 명확해졌습니다.
+TPU는 deployment 지연 가능성 최소화를 위해, CPU와 tightly integrated된 구조가 아닌 PCIe I/O bus 상의 coprocessor (특정 연산 수행 보조 Processor)로 설계되었으며, GPU와 마찬가지로 기존 서버 아키텍처를 변경하지 않고 데이터센터에 바로 장착할 수 있는 형태를 채택했습니다.
 
-​
-
-이에 Google은 추론(inference)용 custom ASIC을 빠르게 개발하는 최우선 프로젝트를 시작했고, 
-
-학습(training)은 상용 GPU를 구매해 대응했습니다. 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_6.png" width="400"/>
 
 ​
 
-목표는 GPU 대비 10배의 cost-performance 개선이었으며, 
+<div align="left">
 
-그 결과 TPU는 설계–검증–제작–데이터센터 배치까지 약 15개월 만에 완료되었습니다.
-
-​
-
-2.2 시스템 구성과 설계 방향
-
-TPU는 deployment 지연 가능성 최소화를 위해, 
-
-CPU와 tightly integrated된 구조가 아닌 PCIe I/O bus 상의 coprocessor (특정 연산 수행 보조 Processor)로 설계되었으며, 
-
-GPU와 마찬가지로 기존 서버 아키텍처를 변경하지 않고 데이터센터에 바로 장착할 수 있는 형태를 채택했습니다.
-
-
-또한 하드웨어 설계와 디버깅을 단순화하기 위해, TPU가 자체적으로 instruction을 fetch하는 방식이 아니라
-
-host CPU가 실행할 TPU instruction을 전달하는 구조를 사용합니다.
+또한 하드웨어 설계와 디버깅을 단순화하기 위해, TPU가 자체적으로 instruction을 fetch하는 방식이 아니라 host CPU가 실행할 TPU instruction을 전달하는 구조를 사용합니다.
 
 이러한 설계로 인해 TPU는 GPU보다는 전통적인 FPU(floating-point unit) coprocessor에 더 가까운 성격을 가집니다.
 
-→ GPU는 내부에서 instruction을 fetch–decode–execute하며 실행 흐름을 스스로 관리하는 programmable processor인 반면,
-
-TPU는 실행 제어를 host CPU에 맡기고, 전달받은 명령에 따라 연산만 수행하는 구조를 채택했습니다.
+→ GPU는 내부에서 instruction을 fetch–decode–execute하며 실행 흐름을 스스로 관리하는 programmable processor인 반면, TPU는 실행 제어를 host CPU에 맡기고, 전달받은 명령에 따라 연산만 수행하는 구조를 채택했습니다.
 
 이로 인해 TPU는 복잡한 fetch·decode·control logic을 제거할 수 있었으며, 하드웨어 구조와 디버깅 복잡도를 크게 감소시켰습니다.
 
-​
-
 설계 목표는 host CPU와의 interaction을 최소화하면서 전체 inference 모델을 TPU 내부에서 모두 실행하는 것이었으며,
 
- 추후 등장할 NN workload까지 고려한 유연성을 확보하는 것이었습니다.
+추후 등장할 NN workload까지 고려한 유연성을 확보하는 것이었습니다.
+
+### 2.3 TPU의 전체 구조 개요
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_7.png" width="400"/>
 
 ​
 
-2.3 TPU의 전체 구조 개요
-
-
-TPU Block Diagram
+<div align="left">TPU Block Diagram
 
 ​
 
