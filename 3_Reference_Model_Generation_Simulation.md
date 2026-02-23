@@ -10,9 +10,9 @@ Directory 내 Python 폴더로 이동하면 여러 Python 스크립트가 존재
 
 genTestData.py는 test data를 생성하는 스크립트이며, 해당 파일을 열어보면 가장 먼저 출력 경로를 설정하는 부분이 확인됩니다.
 
-  outputPath = "../CNN-MNIST-Arty-Z7/CNN-MNIST-Arty-Z7.sim/sim_1/behav/xsim/"
-  
-  headerFilePath = "../CNN-MNIST-Arty-Z7/CNN-MNIST-Arty-Z7.sim/sim_1/behav/xsim/"
+    outputPath = "../CNN-MNIST-Arty-Z7/CNN-MNIST-Arty-Z7.sim/sim_1/behav/xsim/"
+    
+    headerFilePath = "../CNN-MNIST-Arty-Z7/CNN-MNIST-Arty-Z7.sim/sim_1/behav/xsim/"
   
 ​
 위 경로는 생성된 test_data.txt 및 관련 헤더 파일이 저장될 ModelSim(XSIM) 시뮬레이션 디렉터리를 지정합니다.
