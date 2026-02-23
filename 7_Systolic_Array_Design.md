@@ -594,7 +594,11 @@ unsigned 연산 결과
 ## Error / Warning 분석
         WARNING: [XSIM 43-4099] "C:/Users/mini9/Desktop/NPU/OS/PE/mac_pe.sv" Line 1. Module mac_pe(ACC_W=16) doesn't have a timescale but at least one module in design has a timescale.
 
-해당 Warning은 아래 구문이 TB에는 timescale이 정의되어 있으나, DUT 모듈에는 존재하지 않아 XSIM이 시간 단위가 일치하지 않음을 경고하는 메시지입니다. 동작상에는 큰 문제는 없으나, 추후 timing control(#delay 등)이 추가될 경우를 고려하여, 모듈 간 시간 단위 해석 차이를 방지하기 위해 timescale을 통일하는 것이 바람직합니다.
+해당 Warning은 아래 구문이 
+
+        `timescale 1ns/1ps
+
+TB에는 timescale이 정의되어 있으나, DUT 모듈에는 존재하지 않아 XSIM이 시간 단위가 일치하지 않음을 경고하는 메시지입니다. 동작상에는 큰 문제는 없으나, 추후 timing control(#delay 등)이 추가될 경우를 고려하여, 모듈 간 시간 단위 해석 차이를 방지하기 위해 timescale을 통일하는 것이 바람직합니다.
 
 
 
