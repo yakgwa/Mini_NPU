@@ -137,128 +137,78 @@ Batch가 10인 경우, 한 번에 처리할 수 있는 row 수를 초과하므�
 
 ### Input Mapping: Row = Input Feature
 
-Row마다 서로 다른 Feature를 할당합니다. 
+Row마다 서로 다른 Feature를 할당합니다. 샘플 10개는 한꺼번에 들어가지 않고, 마치 컨베이어 벨트처럼 시간 순서대로 하나씩 연속해서(Streaming) Array로 주입됩니다.
+- Row 0: Sample_{0 ~ 9}의 Input[k] Stream
+- Row 1: Sample_{0 ~ 9}의 Input[k + 1] Stream
+- Row 2: Sample_{0 ~ 9}의 Input[k + 2] Stream
+- Row 3: Sample_{0 ~ 9}의 Input[k + 3] Stream
 
-샘플 10개는 한꺼번에 들어가지 않고, 마치 컨베이어 벨트처럼 시간 순서대로 하나씩 연속해서(Streaming) Array로 주입됩니다.
-
-Row 0: Sample_{0 ~ 9}의 Input[k] Stream
-
-Row 1: Sample_{0 ~ 9}의 Input[k + 1] Stream
-
-Row 2: Sample_{0 ~ 9}의 Input[k + 2] Stream
-
-Row 3: Sample_{0 ~ 9}의 Input[k + 3] Stream
-
-​
-
-Diagonal Data Setup (Systolic Schedule)
+### Diagonal Data Setup (Systolic Schedule)
 
 올바른 누적 연산을 위해 입력 데이터는 대각선 형태(Diagonal)로 시간차를 두고 주입됩니다. (Skewing)
-
-Cycle t: Row 0에 Sample_0 진입
-
-Cycle t+1: Row 1에 Sample_0 진입 (Row 0은 Sample_1)
-
-Cycle t+2: Row 2에 Sample_0 진입 ...
-
+- Cycle t: Row 0에 Sample_0 진입
+- Cycle t+1: Row 1에 Sample_0 진입 (Row 0은 Sample_1)
+- Cycle t+2: Row 2에 Sample_0 진입 ...
 이렇게 하면 Sample_0에 대한 Wavefront이 대각선으로 Array를 훑고 지나가게 됩니다.
 
-​
-
-입력 전파 (Horizontal Shift)
+### 입력 전파 (Horizontal Shift)
 
 각 PE는 a_reg를 가지며, 입력 값은 매 cycle마다 우측으로 전달됩니다.
 
-a_reg <= left_neighbor_a_reg
+  a_reg <= left_neighbor_a_reg
+  
 이 흐름을 통해 하나의 입력 데이터가 동일 Row에 있는 4개의 Output Column PE에 차례대로 재사용됩니다.
 
-​
+### Weight는 어떻게 Pre-load 되는가
 
-Weight는 어떻게 Pre-load 되는가
-
-WS에서 “Weight가 고정된다"라는 의미는 "Batch(Sample)이 모두 지나갈 때까지 레지스터 값이 변하지 않음"을 뜻합니다.
-
-​
-
-4 × 4 Array의 각 PE는 Weight Matrix의 4 × 4 Array Sub-Block을 담당합니다.
-
-현재 처리 중인 입력 인덱스가 k ~ k+3이고, 출력 인덱스가 j ~ j+3이라면
-
-PE(r, c)는 W[k+r][j+c] 값을 내부 레지스터에 저장(Latch)합니다.
-
-이 값은 Batch 10개가 모두 처리되는 동안(최소 10 Cycle + Latency) 절대 변하지 않고 고정됩니다.
-
-입력이 파이프라인을 타고 계속 흐르는 동안, PE는 고정된 가중치와 곱셈을 수행합니다.
-
-​
-
+WS에서 “Weight가 고정된다"라는 의미는 "Batch(Sample)이 모두 지나갈 때까지 레지스터 값이 변하지 않음"을 뜻합니다. 4 × 4 Array의 각 PE는 Weight Matrix의 4 × 4 Array Sub-Block을 담당합니다. 현재 처리 중인 입력 인덱스가 k ~ k+3이고, 출력 인덱스가 j ~ j+3이라면
+- PE(r, c)는 W[k+r][j+c] 값을 내부 레지스터에 저장(Latch)합니다.
+- 이 값은 Batch 10개가 모두 처리되는 동안(최소 10 Cycle + Latency) 절대 변하지 않고 고정됩니다.
+- 입력이 파이프라인을 타고 계속 흐르는 동안, PE는 고정된 가중치와 곱셈을 수행합니다.
 Weight는 Tile 교체 시점에만 Weight Buffer에서 PE로 로드됩니다.
 
-​
+### psum 경로: Vertical Accumulation (수직 누적)
 
-psum 경로: Vertical Accumulation (수직 누적)
+WS 구조에서 psum은 위에서 아래로 흐릅니다. 각 PE는 자신의 곱셈 결과를 위에서 내려온 부분합에 더해서 아래로 전달합니다. 각 PE는 매 사이클 다음 연산을 수행합니다.
 
-WS 구조에서 psum은 위에서 아래로 흐릅니다.
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_56.png" width="400"/>
 
-각 PE는 자신의 곱셈 결과를 위에서 내려온 부분합에 더해서 아래로 전달합니다.
+<div align="left">
 
-​
+- psum_{in}: 위쪽 PE (row_{r-1})에서 내려온 값
+- psum_{out}: 아래쪽 PE (row_{r+1})로 전달할 값 (최하단 Row는 Array 외부로 출력)
 
-각 PE는 매 사이클 다음 연산을 수행합니다.
+이 구조에서는 서로 다른 Feature(k ~ k+3)들의 곱이 수직으로 합쳐집니다. Sample_0가 최상단 Row 0을 지나 Row 3을 빠져나올 때,
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_57.png" width="400"/>
 
-psum_{in}: 위쪽 PE (row_{r-1})에서 내려온 값
-
-psum_{out}: 아래쪽 PE (row_{r+1})로 전달할 값 (최하단 Row는 Array 외부로 출력)
-
-​
-
-이 구조에서는 서로 다른 Feature(k ~ k+3)들의 곱이 수직으로 합쳐집니다.
-
-​
-
-Sample_0가 최상단 Row 0을 지나 Row 3을 빠져나올 때,
-
+<div align="left">
 
 위와 같이 4개 채널에 대한 부분합(Partial Sum)이 완성되어 나옵니다.
 
-​
-
-Tile 교체: Double Buffering 및 Psum 관리
+### Tile 교체: Double Buffering 및 Psum 관리
 
 WS 방식에서는 K(Input Feature 784) 차원을 따라 Loop를 돌아야 하므로, psum의 관리가 중요합니다.
 
 ​
 
-Weight Double Buffer
+- Weight Double Buffer
 
-Batch 10개를 처리하는 동안 Weight는 고정되지만, 
+Batch 10개를 처리하는 동안 Weight는 고정되지만, 다음 4개 채널(k+4 ~ k+7)을 처리하려면 새로운 Weight가 필요합니다.
 
-다음 4개 채널(k+4 ~ k+7)을 처리하려면 새로운 Weight가 필요합니다.
-
-Active Bank: 현재 연산 중인 W_{tile} 공급
-
-Shadow Bank: 연산 도중 다음 W_{next_tile}을 미리 로드 (Pre-fetch)
-
+ - Active Bank: 현재 연산 중인 W_{tile} 공급
+ - Shadow Bank: 연산 도중 다음 W_{next_tile}을 미리 로드 (Pre-fetch)
 Batch 10개가 Array를 모두 통과하면 Bank Swap을 수행하여 즉시 다음 연산을 시작합니다.
 
-​
+- Psum External Accumulation (외부 누적)
+- 
+Array 내부에서는 4개 채널에 대한 합만 계산되므로, 전체 784개 채널에 대한 합은 Array 외부의 Accumulator가 담당합니다.
 
-Psum External Accumulation (외부 누적)
-
-Array 내부에서는 4개 채널에 대한 합만 계산되므로, 
-
-전체 784개 채널에 대한 합은 Array 외부의 Accumulator가 담당합니다.
-
-Array 하단 출력: 4개 채널의 부분합
-
-외부 동작: Global_Psum_Buffer[sample_id] += Array_Output
-
+ - Array 하단 출력: 4개 채널의 부분합
+ - 외부 동작: Global_Psum_Buffer[sample_id] += Array_Output
 이렇게 K=0 ~ 783 loop가 모두 끝나면 최종 결과가 완성됩니다.
 
- 
-
-Batch=10 전체 처리 Schedule
+### Batch=10 전체 처리 Schedule
 
 전체 연산은 다음 3중 loop로 정리됩니다. (loop 순서가 데이터 재사용을 결정합니다)
 
