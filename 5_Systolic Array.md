@@ -199,7 +199,7 @@ Batch 10개를 처리하는 동안 Weight는 고정되지만, 다음 4개 채널
 Batch 10개가 Array를 모두 통과하면 Bank Swap을 수행하여 즉시 다음 연산을 시작합니다.
 
 - Psum External Accumulation (외부 누적)
-- 
+
 Array 내부에서는 4개 채널에 대한 합만 계산되므로, 전체 784개 채널에 대한 합은 Array 외부의 Accumulator가 담당합니다.
 
  - Array 하단 출력: 4개 채널의 부분합
