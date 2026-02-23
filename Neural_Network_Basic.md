@@ -10,8 +10,9 @@
 
 <div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_17.png" width="400"/>
 
-<div align="left">
+​
 
+<div align="left">
 - Model / Algorithm Level (Neural Network architecture) : 
   가장 상위 레벨에서는 Neural Network가 어떤 구조로 구성되어 있는지를 정의합니다. 이 레벨의 핵심은 layer의 종류, connection 방식, 그리고 data flow​이며, 구체적인 computation 구현 방식이나 hardware 구현 세부 사항은 다루지 않습니다.
 
