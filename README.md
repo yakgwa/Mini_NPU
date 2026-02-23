@@ -14,11 +14,9 @@
 Mini NPU Architeture & Design & Verfication
 
 다음과 같은 내용을 작성할 수 있습니다.
-- Google TPU
-- 프로젝트 화면 구성
-- 사용한 기술 스택
-- 기술적 이슈와 해결 과정
-- 프로젝트 팀원
+- Prologue
+- Introduce
+- TPU Origin, Architecture, Implementation, and Software
 
 필요한 기술 스택에 대한 logo는 [Mini NPU 폴더](/rtl)에서 다운로드 받을 수 있습니다.
 
@@ -256,27 +254,27 @@ TPU의 instruction 수는 최소화되어 있으며, 전체 동작은 다음 다
 
 - Read_Host_Memory:  
 
-→ CPU host memory(DRAM)에 저장된 입력 (activation) 를 Chip 내부 Unified Buffer(UB)로 전송합니다.
+ → CPU host memory(DRAM)에 저장된 입력 (activation) 를 Chip 내부 Unified Buffer(UB)로 전송합니다.
 
 - Read_Weights: 
 
-→ Weight Memory로부터 weight를 미리 읽어, Matrix Unit 입력으로 사용되는 Weight FIFO에 저장합니다.
+ → Weight Memory로부터 weight를 미리 읽어, Matrix Unit 입력으로 사용되는 Weight FIFO에 저장합니다.
 
 - Matrix_Multiply / Convolve: 
 
-→ Unified Buffer의 activation을 Matrix Unit에 공급하여, 연산 결과를 Accumulator에 누적하는 
+ → Unified Buffer의 activation을 Matrix Unit에 공급하여, 연산 결과를 Accumulator에 누적하는 
 
 matrix multiplication 또는 convolution을 수행합니다.
 
 - Activate (ReLU, Sigmoid 등)
 
-→ Accumulator 연산 결과에 nonlinear function을 적용한 뒤 UB로 저장하며, 
+ → Accumulator 연산 결과에 nonlinear function을 적용한 뒤 UB로 저장하며, 
 
 필요 시 추가 hardware를 통해 pooling operation을 수행합니다.
 
 - Write_Host_Memory
 
-→ Unified Buffer에 저장된 결과 데이터를 CPU host memory(DRAM)로 기록합니다.
+ → Unified Buffer에 저장된 결과 데이터를 CPU host memory(DRAM)로 기록합니다.
 
 TPU microarchitecture의 기본 철학은 Matrix Multiply Unit이 stall 없이 최대한 바쁘게 유지되도록 하는 것입니다.
 
@@ -443,83 +441,83 @@ Software는 correctness만을 보장하면 되며, 실제 성능은 컴파일 �
 
 1. HW설계 관점에서 floating point vs fixed point 차이는?
 
-→ Floating-point arithmetic는 넓은 dynamic range와 높은 numerical stability를 제공하지만, 
-
-hardware implementation cost가 큽니다. Exponent alignment, mantissa normalization, rounding과 같은 추가적인 logic이 필요하므로, 
-
-area, power, 그리고 critical path latency가 증가합니다. 이러한 특성으로 인해 floating-point 연산은 주로 training phase에서 사용됩니다.
-
-​반면 fixed-point (integer) arithmetic는 표현 가능한 dynamic range는 제한적이지만, multiplier와 adder 중심의 단순한 datapath로 구현할 수 있어 Power, Performance, Area(PPA) 측면에서 매우 효율적입니다. 
-
-​이미 학습된 weight를 사용하는 inference phase에서는 quantization을 적용하더라도 충분한 accuracy를 유지하는 경우가 많아, fixed-point 연산이 널리 사용됩니다.
+ → Floating-point arithmetic는 넓은 dynamic range와 높은 numerical stability를 제공하지만, 
+ 
+ hardware implementation cost가 큽니다. Exponent alignment, mantissa normalization, rounding과 같은 추가적인 logic이 필요하므로, 
+ 
+ area, power, 그리고 critical path latency가 증가합니다. 이러한 특성으로 인해 floating-point 연산은 주로 training phase에서 사용됩니다.
+ 
+ ​반면 fixed-point (integer) arithmetic는 표현 가능한 dynamic range는 제한적이지만, multiplier와 adder 중심의 단순한 datapath로 구현할 수 있어 Power, Performance, Area(PPA) 측면에서 매우 효율적입니다. 
+ 
+ ​이미 학습된 weight를 사용하는 inference phase에서는 quantization을 적용하더라도 충분한 accuracy를 유지하는 경우가 많아, fixed-point 연산이 널리 사용됩니다.
 
 ​2. Double Buffering 이란?
 
-→ Double Buffering은 computation과 data transfer를 overlap하여 memory access latency를 숨기기 위한 기법입니다. 
-
-​하나의 buffer에서 computation이 수행되는 동안, 다른 buffer에서는 subsequent tile, activation, 또는 weight data를 미리 load(prefetch)합니다. 
-
-​이를 통해 computation이 data fetch 완료를 기다리며 stall되는 상황을 방지할 수 있습니다.
-
-​TPU에서는 weight tile buffer, Unified Buffer(UB), accumulator memory 등 multiple memory hierarchy levels에서 double buffering이 적용되어, Matrix Multiply Unit(MMU)이 data starvation으로 인해 idle 상태에 빠지는 것을 최소화하도록 설계되었습니다. 
-
-​이러한 구조는 computation throughput을 안정적으로 유지하고, overall utilization을 극대화하는 데 기여합니다.
-
-​관련자료: https://blog.naver.com/bbineekim/222873251460
+ → Double Buffering은 computation과 data transfer를 overlap하여 memory access latency를 숨기기 위한 기법입니다. 
+ 
+ ​하나의 buffer에서 computation이 수행되는 동안, 다른 buffer에서는 subsequent tile, activation, 또는 weight data를 미리 load(prefetch)합니다. 
+ 
+ ​이를 통해 computation이 data fetch 완료를 기다리며 stall되는 상황을 방지할 수 있습니다.
+ 
+ ​TPU에서는 weight tile buffer, Unified Buffer(UB), accumulator memory 등 multiple memory hierarchy levels에서 double buffering이 적용되어, Matrix Multiply Unit(MMU)이 data starvation으로 인해 idle 상태에 빠지는 것을 최소화하도록 설계되었습니다. 
+ 
+ ​이러한 구조는 computation throughput을 안정적으로 유지하고, overall utilization을 극대화하는 데 기여합니다.
+ 
+ ​관련자료: https://blog.naver.com/bbineekim/222873251460
 
 ​3. Systolic Array의 장점은? Systolic Array를 사용하지 않는다면 어떤 식으로 구현되나?
 
-→ Systolic Array의 가장 큰 장점은 data movement를 구조적으로 최소화하면서 compute unit utilization을 지속적으로 유지할 수 있다는 점입니다. 
-
-Activation과 weight는 Processing Element(PE) 간에 local forwarding 방식으로 전달되며 반복적으로 data reuse가 이루어지고, partial sum은 array 내부에서 in-place accumulation됩니다. 
-
-​이로 인해 연산 과정에서 DRAM이나 상위 memory hierarchy에 대한 접근이 크게 감소하며, compute unit은 data starvation 없이 continuous execution이 가능합니다. 
-
-이러한 특성은 matrix multiplication과 같이 MAC operation이 대량으로 반복되는 workload에서 높은 energy efficiency와 안정적인 throughput을 제공하는 데 특히 효과적입니다.
-
-​반면 systolic array를 사용하지 않는 경우에는, centralized register file이나 shared memory에서 데이터를 읽어 각 compute unit으로 분배하는 구조, 혹은 GPU와 같이 scheduler-driven execution model을 사용하는 방식으로 구현됩니다.
-
-​이러한 구조는 execution flexibility는 높지만, 연산마다 데이터가 memory hierarchy를 반복적으로 이동해야 하며, 이를 관리하기 위한 dynamic scheduling과 control logic overhead가 필수적으로 수반됩니다. 
-
-​그 결과 data movement overhead와 control complexity가 증가하고, 동일한 성능을 달성하기 위해 더 많은 power and area cost가 요구되는 경우가 많습니다.
+ → Systolic Array의 가장 큰 장점은 data movement를 구조적으로 최소화하면서 compute unit utilization을 지속적으로 유지할 수 있다는 점입니다. 
+ 
+ Activation과 weight는 Processing Element(PE) 간에 local forwarding 방식으로 전달되며 반복적으로 data reuse가 이루어지고, partial sum은 array 내부에서 in-place accumulation됩니다. 
+ 
+ ​이로 인해 연산 과정에서 DRAM이나 상위 memory hierarchy에 대한 접근이 크게 감소하며, compute unit은 data starvation 없이 continuous execution이 가능합니다. 
+ 
+ 이러한 특성은 matrix multiplication과 같이 MAC operation이 대량으로 반복되는 workload에서 높은 energy efficiency와 안정적인 throughput을 제공하는 데 특히 효과적입니다.
+ 
+ ​반면 systolic array를 사용하지 않는 경우에는, centralized register file이나 shared memory에서 데이터를 읽어 각 compute unit으로 분배하는 구조, 혹은 GPU와 같이 scheduler-driven execution model을 사용하는 방식으로 구현됩니다.
+ 
+ ​이러한 구조는 execution flexibility는 높지만, 연산마다 데이터가 memory hierarchy를 반복적으로 이동해야 하며, 이를 관리하기 위한 dynamic scheduling과 control logic overhead가 필수적으로 수반됩니다. 
+ 
+ ​그 결과 data movement overhead와 control complexity가 증가하고, 동일한 성능을 달성하기 위해 더 많은 power and area cost가 요구되는 경우가 많습니다.
 
 ​4. MLP에서 Hidden Layer와 weight 갯수는 어떻게 정하는가?
 
-→ 원칙적으로는 hidden layer가 1개이더라도 neuron 수가 충분하다면, 입력과 출력 사이의 관계를 표현하는 것은 가능합니다.
-다만 hidden layer가 1개인 경우, 복잡한 패턴을 표현하기 위해 필요한 neuron 수가 지나치게 커지게 되고, 그 결과 parameter 증가, power consumption 증가, 그리고 training이 비효율적이라는 문제가 발생합니다.
-이 때문에 실제로는 hidden layer를 1~3개 정도로 설정하고, 문제의 난이도나 데이터 특성에 따라 그 개수를 조절하는 방식이 일반적으로 사용된다고 합니다.
-일반적으로 hidden layer를 2개 사용하는 경우가 많은데, 이는 입력과 출력 사이의 관계가 하나의 linear boundary로는 잘 설명되지 않는 경우를 다루기 위해서입니다.
-조금 더 구체적으로 보면, 첫 번째 hidden layer에서는 입력 데이터를 변환해 단순한 pattern이나 low-level feature를 만들고, 두 번째 hidden layer에서는 이 결과들을 조합해 더 복잡한 decision boundary를 표현할 수 있는 high-level feature를 형성합니다.Hidden layer의 개수가 3개 이상으로 늘어나면,
-표현력은 더 좋아질 수 있지만, 그에 비해 training complexity 증가, convergence가 불안정해지는 문제, overfitting risk 등이 함께 커지는 경우가 많습니다.
-결국 hidden layer의 개수는 데이터 값의 크기나 변동폭보다는, 입력과 출력 사이의 관계가 linear boundary로 구분 가능한지, 여러 단계의 non-linear transformation이 필요한 구조인지를 기준으로 결정됩니다.
+ → 원칙적으로는 hidden layer가 1개이더라도 neuron 수가 충분하다면, 입력과 출력 사이의 관계를 표현하는 것은 가능합니다.
+ 다만 hidden layer가 1개인 경우, 복잡한 패턴을 표현하기 위해 필요한 neuron 수가 지나치게 커지게 되고, 그 결과 parameter 증가, power consumption 증가, 그리고 training이 비효율적이라는 문제가 발생합니다.
+ 이 때문에 실제로는 hidden layer를 1~3개 정도로 설정하고, 문제의 난이도나 데이터 특성에 따라 그 개수를 조절하는 방식이 일반적으로 사용된다고 합니다.
+ 일반적으로 hidden layer를 2개 사용하는 경우가 많은데, 이는 입력과 출력 사이의 관계가 하나의 linear boundary로는 잘 설명되지 않는 경우를 다루기 위해서입니다.
+ 조금 더 구체적으로 보면, 첫 번째 hidden layer에서는 입력 데이터를 변환해 단순한 pattern이나 low-level feature를 만들고, 두 번째 hidden layer에서는 이 결과들을 조합해 더 복잡한 decision boundary를 표현할 수 있는 high-level feature를 형성합니다.Hidden layer의 개수가 3개 이상으로 늘어나면,
+ 표현력은 더 좋아질 수 있지만, 그에 비해 training complexity 증가, convergence가 불안정해지는 문제, overfitting risk 등이 함께 커지는 경우가 많습니다.
+ 결국 hidden layer의 개수는 데이터 값의 크기나 변동폭보다는, 입력과 출력 사이의 관계가 linear boundary로 구분 가능한지, 여러 단계의 non-linear transformation이 필요한 구조인지를 기준으로 결정됩니다.
 
 5. AI동작은 Training, Inference 로 구분되는데, 둘다 HW로 만드는건지?
 
-→ AI 동작은 training과 inference로 나뉘지만, 일반적으로 두 단계가 모두 hardware에서 수행되지는 않습니다.
-
-보통 training은 유연성이 중요한 작업이기 때문에 software 환경에서 수행되고, inference는 반복적인 연산 위주이므로 hardware accelerator에서 수행되는 경우가 많습니다.
-
-Training은 단순히 결과를 계산하는 단계가 아니라, 입력을 넣어 결과를 계산하는 forward pass 이후, 출력을 정답과 비교해 오차의 원인을 거슬러 추적하는 backward pass를 통해 gradient를 계산하고, 이를 기반으로 weight를 update하는 과정까지 포함합니다.
-
-이 과정에서는 optimizer, loss function, training technique 등이 자주 변경되며, 그에 따라 operation type과 control flow도 함께 복잡해집니다.
-
-따라서 구조를 유연하게 수정하고 디버깅할 수 있는 software 기반 execution이 현실적으로 가장 효율적이며, 실제로는 GPU와 deep learning framework를 이용해 training을 수행하는 경우가 대부분입니다.
-
-반면 inference는 이미 학습된 weight를 고정한 상태에서 forward pass만 수행해 결과를 생성하는 단계입니다. 연산 패턴이 비교적 일정하고 MAC 중심의 계산이 반복되기 때문에, 특정 dataflow에 맞춰 최적화된 hardware accelerator에서 처리하는 것이 성능과 전력 효율 측면에서 유리합니다.
-
-이러한 이유로 mobile, embedded, server inference 환경에서는 inference를 hardware로 처리하는 구조가 일반적으로 사용됩니다.
-
-일부 GPU는 training과 inference를 모두 수행하지만, 전용 accelerator는 일반적으로 inference를 대상으로 사용됩니다.
-
-+ 추가내용
-추가로, TPU 세대별 역할을 구분하면 이해가 더 명확해집니다.
-
-TPU v1은 데이터센터 추론(inference) 가속을 우선 목표로 설계된 ASIC이며, Google은 당시 학습(training)은 상용 GPU를 활용하는 전략을 취했습니다.
-
-반면 TPU v2/v3는 대규모 DNN 학습을 주요 타깃으로 확장된 세대로, Google은 TPU v2 아키텍처를 “training을 위한 domain-specific supercomputer”로 별도 정리하고 있습니다.
-
-즉, TPU는 초기에는 inference 중심으로 출발했지만, 이후 세대에서는 training과 inference를 모두 커버하는 방향으로 진화했으며,
-현재 Cloud TPU 역시 두 워크로드 모두를 대상으로 최적화된 가속기라는 점을 전제로 설명됩니다.
+ → AI 동작은 training과 inference로 나뉘지만, 일반적으로 두 단계가 모두 hardware에서 수행되지는 않습니다.
+ 
+ 보통 training은 유연성이 중요한 작업이기 때문에 software 환경에서 수행되고, inference는 반복적인 연산 위주이므로 hardware accelerator에서 수행되는 경우가 많습니다.
+ 
+ Training은 단순히 결과를 계산하는 단계가 아니라, 입력을 넣어 결과를 계산하는 forward pass 이후, 출력을 정답과 비교해 오차의 원인을 거슬러 추적하는 backward pass를 통해 gradient를 계산하고, 이를 기반으로 weight를 update하는 과정까지 포함합니다.
+ 
+ 이 과정에서는 optimizer, loss function, training technique 등이 자주 변경되며, 그에 따라 operation type과 control flow도 함께 복잡해집니다.
+ 
+ 따라서 구조를 유연하게 수정하고 디버깅할 수 있는 software 기반 execution이 현실적으로 가장 효율적이며, 실제로는 GPU와 deep learning framework를 이용해 training을 수행하는 경우가 대부분입니다.
+ 
+ 반면 inference는 이미 학습된 weight를 고정한 상태에서 forward pass만 수행해 결과를 생성하는 단계입니다. 연산 패턴이 비교적 일정하고 MAC 중심의 계산이 반복되기 때문에, 특정 dataflow에 맞춰 최적화된 hardware accelerator에서 처리하는 것이 성능과 전력 효율 측면에서 유리합니다.
+ 
+ 이러한 이유로 mobile, embedded, server inference 환경에서는 inference를 hardware로 처리하는 구조가 일반적으로 사용됩니다.
+ 
+ 일부 GPU는 training과 inference를 모두 수행하지만, 전용 accelerator는 일반적으로 inference를 대상으로 사용됩니다.
+ 
+ + 추가내용
+ 추가로, TPU 세대별 역할을 구분하면 이해가 더 명확해집니다.
+ 
+ TPU v1은 데이터센터 추론(inference) 가속을 우선 목표로 설계된 ASIC이며, Google은 당시 학습(training)은 상용 GPU를 활용하는 전략을 취했습니다.
+ 
+ 반면 TPU v2/v3는 대규모 DNN 학습을 주요 타깃으로 확장된 세대로, Google은 TPU v2 아키텍처를 “training을 위한 domain-specific supercomputer”로 별도 정리하고 있습니다.
+ 
+ 즉, TPU는 초기에는 inference 중심으로 출발했지만, 이후 세대에서는 training과 inference를 모두 커버하는 방향으로 진화했으며,
+ 현재 Cloud TPU 역시 두 워크로드 모두를 대상으로 최적화된 가속기라는 점을 전제로 설명됩니다.
 
 ### In-Datacenter Performance Analysis of a Tensor Processing Unit을 바탕으로 분석을 진행했습니다.
 
