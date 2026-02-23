@@ -379,7 +379,7 @@
 
     ​동시에 PE 내부에서는 a_reg * b_reg 곱(mul)을 계산하고, mac_pe에서 출력 누산값(acc_sum)을 갱신합니다. 이때 clr은 누산기 상태(예: acc_sum) 초기화에만 관여하며, 데이터 전달 레지스터(a_reg/b_reg)는 초기화하지 않습니다.
 
-​- ROWS / CONS : 2-D systolic array는 행(row)과 열(column)로 PE가 배치되므로, ROWS, COLS parameter로 array의 크기(PE 개수)를 일반화합니다. 해당 module은 ROWS × COLS 개의 pe_systolic_cell을 generate로 instance화하며, 입력 stream은 a_in_row[0:ROWS-1], b_in_col[0:COLS-1]로 정의합니다.
+- ROWS / CONS : 2-D systolic array는 행(row)과 열(column)로 PE가 배치되므로, ROWS, COLS parameter로 array의 크기(PE 개수)를 일반화합니다. 해당 module은 ROWS × COLS 개의 pe_systolic_cell을 generate로 instance화하며, 입력 stream은 a_in_row[0:ROWS-1], b_in_col[0:COLS-1]로 정의합니다.
 
 - packed / unpacked array : SystemVerilog에서 신호의 bit-width는 packed dimension으로, 구성 개수(배열 차원) 는 unpacked dimension으로 표현합니다.
 
