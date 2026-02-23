@@ -30,11 +30,9 @@
  - Weight (B): 상단 → 하단으로 이동
 
 - 동기화 (Synchronization) 
-
     정확한 연산 타이밍을 맞추기 위해 입력 데이터($A, B$)는 대각선 형태의 Wavefront을 그리며 진입합니다. 이를 위해 각 행/열마다 Shift Delay를 주어 데이터가 순차적으로 PE에 도달하도록 제어합니다.
 
 ### Weight Stationary (WS) 구조의 핵심
-
 반면, Google TPU 등이 채택한 WS 방식은 "가중치(Weight)를 PE 안에 고정한다"라는 점에서 OS 방식과 정반대의 흐름을 가집니다.
 
 ​- 고정된 데이터 (Stationary):
@@ -46,9 +44,19 @@
 
 이를 시각적으로 나타내면 다음과 같습니다. C = A × W 연산 시, Input과 Weight가 만나 생성되는 결과 행렬 C의 구조입니다.
 
- 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_48.jpg" width="400"/>
+
+<div align="left">
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_49.jpg" width="400"/>
+
+<div align="left">
+
 ### OS
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_50.jpg" width="400"/>
+
+<div align="left">
 
 ### WS
 
