@@ -147,6 +147,10 @@ Command Prompt 또는 PowerShell을 실행한 뒤, 아래 명령어를 통해 Nu
 
     또한, 작업 Directory(ModelSim 실행 디렉터리) 내에 tb 및 rtl 디렉터리의 모든 파일을 함께 위치시키면 해당 오류를 해결할 수 있습니다.
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_34.png" width="400"/>
+
+<div align="left">
+
 6. Simulation
 
     컴파일이 문제없이 완료되면 Simulation을 진행합니다.
@@ -155,7 +159,7 @@ Command Prompt 또는 PowerShell을 실행한 뒤, 아래 명령어를 통해 Nu
 
     해당 창에서 work → top_sim을 선택하면 Simulation 화면이 실행됩니다.
 
- <div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_34.png" width="400"/>
+ <div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_35.png" width="400"/>
 
 <div align="left">  
 
