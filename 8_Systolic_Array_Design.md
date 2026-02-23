@@ -438,11 +438,8 @@
         foreach(A[r,c]) A[r][c] = $urandom_range(0, (1 << DATA_W) - 1);
         foreach(B[r,c]) B[r][c] = $urandom_range(0, (1 << DATA_W) - 1);     
 
-    실제 입력 값이 0 ~ 255 범위로 생성되었기 때문입니다. 
-
-​    이 값들은 TB 내부에서는 정상적인 정수로 보이지만, DUT의 logic signed [DATA_W-1:0] 입력 Port로 전달되는 과정에서 bid-width에 따라 truncation이 발생하며, DATA_W=8 기준으로는 128~255 구간의 값이 음수로 해석됩니다.
-
-​이로 인해 TB에서 계산한 reference 결과와 DUT에서 실제로 연산한 값 사이에 불일치가 발생하였습니다. 이를 해결하기 위해 랜덤 입력 생성 범위를 다음과 같이 DATA_W-bit signed 표현 범위로 제한하였고,
+    실제 입력 값이 0 ~ 255 범위로 생성되었기 때문입니다. 이 값들은 TB 내부에서는 정상적인 정수로 보이지만, DUT의 logic signed [DATA_W-1:0] 입력 Port로 전달되는 과정에서 bid-width에 따라 truncation이 발생하며, DATA_W=8 기준으로는 128~255 구간의 값이 음수로 해석됩니다.
+    ​이로 인해 TB에서 계산한 reference 결과와 DUT에서 실제로 연산한 값 사이에 불일치가 발생하였습니다. 이를 해결하기 위해 랜덤 입력 생성 범위를 다음과 같이 DATA_W-bit signed 표현 범위로 제한하였고,
 
         foreach (A[r, c]) A[r][c] = $urandom_range(-(1 << (DATA_W-1)), (1 << (DATA_W-1)) - 1);
         foreach (B[r, c]) B[r][c] = $urandom_range(-(1 << (DATA_W-1)), (1 << (DATA_W-1)) - 1);
@@ -451,24 +448,18 @@
 
 - Warning
 
-Simulation은 정상적으로 수행되었으나, compile 과정에서 warning 메시지가 검출되었습니다.
+    Simulation은 정상적으로 수행되었으나, compile 과정에서 warning 메시지가 검출되었습니다. 해당 warning을 분석한 결과, systolic_array_2d에 instance화된 pe_systolic_cell module서 발생한 문제임을 확인할 수 있었습니다. 관련 코드를 확인한 결과, a_out 신호의 bit-width 선언이 잘못 작성되어 있음을 확인하였습니다.
 
-해당 warning을 분석한 결과, 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_76.png" width="400"/>
 
-systolic_array_2d에 instance화된 pe_systolic_cell module서 발생한 문제임을 확인할 수 있었습니다.
+<div align="left">
 
+구체적으로, a_out은 DATA_W(8-bit)로 선언되어야 하나, 실제 코드에서는 16-bit로 선언되어 있었으며, 이로 인해 상위 module과의 port 연결 과정에서 bit-width 불일치에 따른 warning이 발생하였습니다.
 
-관련 코드를 확인한 결과, a_out 신호의 bit-width 선언이 잘못 작성되어 있음을 확인하였습니다.
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_77.png" width="400"/>
 
+<div align="left">
 
-구체적으로, a_out은 DATA_W(8-bit)로 선언되어야 하나, 실제 코드에서는 16-bit로 선언되어 있었으며, 
+​즉, 기능적인 동작에는 직접적인 영향을 주지는 않았으나, interface 정의와 실제 신호 폭이 일치하지 않는 상태였음을 의미하며, 향후 확장 또는 합성 단계에서 잠재적인 오류로 이어질 수 있는 부분이므로 [DATA_W-1:0]으로 수정하였습니다.
 
-이로 인해 상위 module과의 port 연결 과정에서 bit-width 불일치에 따른 warning이 발생하였습니다.
-
-​
-
-즉, 기능적인 동작에는 직접적인 영향을 주지는 않았으나, 
-
-interface 정의와 실제 신호 폭이 일치하지 않는 상태였음을 의미하며, 
-
-향후 확장 또는 합성 단계에서 잠재적인 오류로 이어질 수 있는 부분이므로 [DATA_W-1:0]으로 수정하였습니다.
+이와 같이 2-D Systolic Array를 구현하였으며, 다음 글에서는 마지막 단계로 Controller와 Activation 함수를 추가하여 전체 설계를 완성할 예정입니다.
