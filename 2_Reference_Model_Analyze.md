@@ -456,7 +456,7 @@ Systolic Array의 개념과 연산 방식은 아래 링크와 뒤에 이어질 �
 
 ​즉, 기존 FC 구조가 시간 축(1D)으로 연산을 확장했다면, Systolic Array는 공간 + 시간(2D)으로 연산을 전개하는 구조라고 볼 수 있습니다.
 
-​### FC 연산을 Systolic Array에 적용하기 위한 고려사항
+### FC 연산을 Systolic Array에 적용하기 위한 고려사항
 
 다만 Fully Connected 연산은 1-D dot-product 특성을 가지므로, Systolic Array에 직접 매핑할 수는 없습니다.
 
