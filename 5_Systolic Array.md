@@ -102,76 +102,40 @@ Q1. Input과 Weight의 구성
 
 ​Q2. 1 × 4 Array 구조는 WS 인가, OS 인가?
 
-    Input과 Weight가 매 cycle마다 PE에 공급되는 형태만 보면 Output Stationary(OS) 구조로 오해하기 쉽습니다. 그러나 아키텍처 관점에서는 Weight Stationary(WS)로 분류하는 것이 타당합니다.
-
-    그 이유는 다음과 같습니다. 각 PE는 Weight Matrix의 특정 column을 전담하며 해당 Weight는 PE 간에 전달되거나 이동하지 않습니다. Input 데이터만이 Systolic 하게 PE를 따라 흐르며 연산을 수행합니다.
-​
-    Batch Size = 1 환경에서는 cycle마다 다른 weight 값이 사용되기 때문에 Weight가 이동하는 것처럼 보일 수 있습니다. 그러나 이는 Weight가 흐르는 것이 아니라, 동일한 PE 위치에서 연산 순서에 따라 값이 갱신되는 것입니다. 즉, Weight의 공간적 위치가 고정되어 있다는 점에서 본 구조의 본질은 WS에 해당합니다.
+    Input과 Weight가 매 cycle마다 PE에 공급되는 형태만 보면 Output Stationary(OS) 구조로 오해하기 쉽습니다. 그러나 아키텍처 관점에서는 Weight Stationary(WS)로 분류하는 것이 타당합니다. 그 이유는 다음과 같습니다. 각 PE는 Weight Matrix의 특정 column을 전담하며 해당 Weight는 PE 간에 전달되거나 이동하지 않습니다. Input 데이터만이 Systolic 하게 PE를 따라 흐르며 연산을 수행합니다. Batch Size = 1 환경에서는 cycle마다 다른 weight 값이 사용되기 때문에 Weight가 이동하는 것처럼 보일 수 있습니다. 그러나 이는 Weight가 흐르는 것이 아니라, 동일한 PE 위치에서 연산 순서에 따라 값이 갱신되는 것입니다. 즉, Weight의 공간적 위치가 고정되어 있다는 점에서 본 구조의 본질은 WS에 해당합니다.
 
 ​Q3. Tile 교체 시점과 Pipeline을 활용한 효율 극대화
-    마지막 입력 a_783이 주입된 이후에도, Systolic Array의 전파 특성으로 인해 PE 위치에 따라 연산 종료 시점에는 차이가 발생합니다.
+    마지막 입력 a_783이 주입된 이후에도, Systolic Array의 전파 특성으로 인해 PE 위치에 따라 연산 종료 시점에는 차이가 발생합니다. 모든 PE의 연산이 끝난 뒤 다음 Tile을 로드할 경우, 일부 PE는 동작하지 않고 대기하게 되어 파이프라인 효율이 저하됩니다. 이를 방지하기 위해, 각 PE가 자신의 연산을 완료하는 즉시 다음 Tile에 대한 Weight를 로드하고 연산을 시작하는 Wavefront 기반 Tile 교체 방식을 적용합니다. 하드웨어적으로는 Double Buffering(또는 Shadow Register) 구조를 사용하여 현재 Tile 연산과 다음 Tile의 Weight 로딩을 중첩 수행함으로써, Cycle 손실 없는 연속 처리가 가능합니다.
 
-​
-
-모든 PE의 연산이 끝난 뒤 다음 Tile을 로드할 경우, 일부 PE는 동작하지 않고 대기하게 되어 파이프라인 효율이 저하됩니다.
-
-​
-
-이를 방지하기 위해, 각 PE가 자신의 연산을 완료하는 즉시 다음 Tile에 대한 Weight를 로드하고 연산을 시작하는
-
-Wavefront 기반 Tile 교체 방식을 적용합니다.
-
-​
-
-하드웨어적으로는 Double Buffering(또는 Shadow Register) 구조를 사용하여 
-
-현재 Tile 연산과 다음 Tile의 Weight 로딩을 중첩 수행함으로써, Cycle 손실 없는 연속 처리가 가능합니다.
-
-실제 연산 값 적용 및 확장_(2): 4×4 Weight-Stationary Systolic Array
+### 실제 연산 값 적용 및 확장_(2): 4×4 Weight-Stationary Systolic Array
 
 앞서 1 × 4 Systolic Array에서의 연산 흐름을 살펴보았으니, 이제 이를 4 × 4 Systolic Array로 확장해 보겠습니다.
 
 4 × 4 구조로 확장하면서는 batch 크기를 10으로 늘려, 여러 입력 샘플을 동시에 처리하는 형태로 구성합니다.
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_54.png" width="400"/>
 
-​
+<div align="left">
+ 
+4 × 4 Systolic Array에서의 mapping은 다음과 같습니다. 
 
-4 × 4 Systolic Array에서의 mapping은 다음과 같습니다.
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_55.png" width="400"/>
 
+<div align="left">
 
 Column(열) 방향으로는 출력 뉴런 4개를 병렬로 처리하며, 하나의 tile은 출력 4개 column에 해당합니다.
 
-Row(행) 방향으로는 batch 샘플을 최대 4개까지 동시에 처리합니다.
+Row(행) 방향으로는 batch 샘플을 최대 4개까지 동시에 처리합니다. 따라서 4 × 4 Array는 한 번에 4개 샘플 × 4개 출력에 대한 연산 결과를 생성합니다.
 
-​
+Batch가 10인 경우, 한 번에 처리할 수 있는 row 수를 초과하므로 입력 샘플을 3개의 group으로 나누어 순차적으로 처리합니다. 또한 출력 뉴런은 총 30개이기 때문에, column 4개씩을 묶어 총 8개의 tile로 분할합니다.
 
-따라서 4 × 4 Array는 한 번에 4개 샘플 × 4개 출력에 대한 연산 결과를 생성합니다.
+​이와 같이 4 × 4 Systolic Array에서는 row 방향으로 batch를, column 방향으로 출력 뉴런을 병렬화하고, tile과 group 단위로 연산을 반복 수행하게 됩니다.
 
-​
-
-Batch가 10인 경우, 한 번에 처리할 수 있는 row 수를 초과하므로 입력 샘플을 3개의 group으로 나누어 순차적으로 처리합니다.
-
-또한 출력 뉴런은 총 30개이기 때문에, column 4개씩을 묶어 총 8개의 tile로 분할합니다.
-
-​
-
-이와 같이 4 × 4 Systolic Array에서는 row 방향으로 batch를, column 방향으로 출력 뉴런을 병렬화하고,
-
-tile과 group 단위로 연산을 반복 수행하게 됩니다.
-
-​
-
-다만 WS 방식에서는 row 방향의 의미가 앞서 언급한 batch 병렬성과는 다릅니다.​
-
-​
-
-4개의 row는 서로 다른 샘플을 처리하는 것이 아니라, 입력 벡터 내에서 서로 다른 feature(row index)를 담당합니다.
+<mark>​다만 WS 방식에서는 row 방향의 의미가 앞서 언급한 batch 병렬성과는 다릅니다.​</mark> 4개의 row는 서로 다른 샘플을 처리하는 것이 아니라, 입력 벡터 내에서 서로 다른 feature(row index)를 담당합니다.
 
 즉, 4 × 4 Systolic Array는 한 번에 입력 채널 4개 (k ∼ k+3)와 출력 채널 4개 (j ∼ j+3)의 교차 영역에 대한 연산을 수행합니다.
 
-​
-
-Input Mapping: Row = Input Feature
+### Input Mapping: Row = Input Feature
 
 Row마다 서로 다른 Feature를 할당합니다. 
 
