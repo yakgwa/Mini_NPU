@@ -61,6 +61,7 @@ GPU와 비교했을 때 TPU는 inference workload에 최적화된 연산 구조�
 논문에서는 TPU를 동일한 데이터센터 환경에서 사용된 Intel Haswell CPU와 NVIDIA K80 GPU와 비교합니다.
 
 ​평가에 사용된 workload는 TensorFlow로 작성된 실제 production inference application이며, MLP, CNN, LSTM 모델을 포함해 데이터센터 추론 워크로드의 약 95%를 대표합니다.
+
 → 실제 데이터센터에서 돌아가는 대표 추론 모델을 사용해, 실제 서비스 환경을 거의 그대로 반영했음을 나타냅니다.
 
 ​그 결과, 일부 application에서의 낮은 자원 활용률에도 불구하고 TPU는 평균적으로 CPU나 GPU 대비 15~30배 빠른 성능을 보였고, 전력 효율(TOPS/Watt) 역시 30~80배 더 높게 나타났습니다.​
@@ -95,7 +96,7 @@ Inference: Training을 통해 이미 학습된 weight를 그대로 사용하여,
 
 ​이러한 선택은  Power, Performance, Area(PPA) 측면에서 유리한 설계 trade-off로 설명됩니다.
 
-​### 1.1 데이터센터에서 사용되는 Neural Network 유형
+### 1.1 데이터센터에서 사용되는 Neural Network 유형
 
 현재 데이터센터 추론 환경에서 널리 사용되는 신경망은 크게 세 가지 유형으로 나눌 수 있습니다.
 
