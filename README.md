@@ -64,7 +64,7 @@ GPU와 비교했을 때 TPU는 inference workload에 최적화된 연산 구조�
 
 → 실제 데이터센터에서 돌아가는 대표 추론 모델을 사용해, 실제 서비스 환경을 거의 그대로 반영했음을 나타냅니다.
 
-​그 결과, 일부 application에서의 낮은 자원 활용률에도 불구하고 TPU는 평균적으로 CPU나 GPU 대비 15~30배 빠른 성능을 보였고, 전력 효율(TOPS/Watt) 역시 30~80배 더 높게 나타났습니다.​
+​그 결과, 일부 application에서의 낮은 자원 활용률에도 불구하고 TPU는 평균적으로 CPU나 GPU 대비 15..30배 빠른 성능을 보였고, 전력 효율(TOPS/Watt) 역시 30..80배 더 높게 나타났습니다.​
 
 ## 1. Introduction — Neural Network와  inference환경
 
