@@ -49,7 +49,7 @@
 - Mathematical / Operation Level (Mathematical computation) :
   다음 레벨에서는 Neural Network 내부에서 수행되는 계산을 수학적 연산 관점에서 바라봅니다.
 
-​- MatMul (Matrix Multiplication) : 
+- MatMul (Matrix Multiplication) : 
   MatMul은 행렬 곱 연산 그 자체를 의미하는 가장 근본적인 computation unit입니다. Fully Connected, Convolution, Attention과 같은 연산들은 모두 MatMul 형태로 환원될 수 있습니다. 이 레벨에서는 hardware 구조나 execution 방식보다는, “무엇을 계산하는가”에 대한 수학적 정의가 핵심입니다.
 
 - Algorithm / Interface Level (Execution-oriented representation) :
