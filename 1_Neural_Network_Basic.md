@@ -64,7 +64,7 @@
   가장 하위 레벨에서는 GEMM과 같은 연산을 hardware에서 어떻게 빠르고 효율적으로 수행할 것인가를 다룹니다. 이 레벨의 핵심은 연산의 수학적 정의가 아니라, data movement, parallelism, utilization입니다.
 
 ​- Systolic Array : 
-Systolic Array는 다수의 Processing Element (PE)를 2D array 형태로 배치한 hardware 구조입니다.Input data와 weight가 인접한 PE로 cycle 단위로 전달되며, 각 PE는 multiply–accumulate (MAC) operation을 매 cycle 수행합니다.
+Systolic Array는 다수의 Processing Element (PE)를 2D array 형태로 배치한 hardware 구조입니다. Input data와 weight가 인접한 PE로 cycle 단위로 전달되며, 각 PE는 multiply–accumulate (MAC) operation을 매 cycle 수행합니다.
 
 ​이 구조의 목적은 data와 weight를 PE 내부 및 인접 PE 간에 전달함으로써 memory access를 최소화하고, 동일한 data를 여러 PE에서 반복 활용하여 data reuse를 극대화하는 데 있습니다. 
 
