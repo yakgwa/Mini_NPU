@@ -374,7 +374,7 @@ systolic execution dataflow type
 
  - partial sum이 PE에 고정되어있으며, activation과 weight가 PE로 입력되어 이동합니다.
 
-​- Weight-Stationary PE (WS)
+- Weight-Stationary PE (WS)
 
  - weight가 PE에 고정되어있으며, activation이 입력으로 들어와 이동을 합니다. 주로 TPU에서 사용됩니다.
 
