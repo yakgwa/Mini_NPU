@@ -1,19 +1,20 @@
+## Proposed Model: Ver.2
+
 이전 글에서는 initial 코드를 기반으로, 실제 inference가 수행되는 mini-NPU를 구현하였습니다.
 
-​
+다만 해당 모델은 초기 설계 목표였던 Systolic Array 기반 OS(Output Stationary) dataflow가 아니라, 입력 데이터를 동일 cycle에 모든 PE로 동시에 전달하는 Broadcast 방식으로 동작합니다.
 
-다만 해당 모델은 초기 설계 목표였던 Systolic Array 기반 OS(Output Stationary) dataflow가 아니라, 
-
-입력 데이터를 동일 cycle에 모든 PE로 동시에 전달하는 Broadcast 방식으로 동작합니다.
-
-
-
-AI 활용
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_98.png" width="400"/>
 
 Ver.1 – Global Broadcast Dataflow
 
+<div align="left">
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_99.png" width="400"/>
 
 Ver.2 – Systolic Array (Output Stationary) Dataflow
+
+<div align="left">
 
 따라서 이번 글에서는 Ver.1 아키텍처를 기반으로, 실제 SA의 OS dataflow에 맞는 연산 구조로 재구성하고 구현 과정을 정리했습니다.
 
