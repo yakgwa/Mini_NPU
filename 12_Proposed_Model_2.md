@@ -109,57 +109,50 @@ Proposed Model v.2는 3차 Simulation까지 진행한 이후 Roll-back 한 뒤, 
             end
         end
 
-Weight Skew Pipeline (w_pipe) 구조와 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_100.png" width="400"/>
 
-Diagonal Tap (w_wavefront_packed) 동작
+Weight Skew Pipeline (w_pipe) 구조와 Diagonal Tap (w_wavefront_packed) 동작
+
+<div align="left">
 
 해당 pipeline은 4×4 shift register 구조로 구성하였으며, 각 lane의 weight가 매 cycle마다 한 단계씩 이동하도록 설계하였습니다.
 
-​
+​lane index에 따라 서로 다른 pipeline stage를 tap하여, lane[0]~[3]에 대해 0 ~ 3-cycle skew가 형성되도록 구성하였습니다.
 
-lane index에 따라 서로 다른 pipeline stage를 tap하여, lane[0]~[3]에 대해 0 ~ 3-cycle skew가 형성되도록 구성하였습니다.
+​최종적으로 w_pipe[0][0], w_pipe[1][1], w_pipe[2][2], w_pipe[3][3]를 묶어 출력함으로써, lane별 0~3 cycle의 time skew가 의도적으로 반영된 weight wavefront를 구성하고, PE array 입력 타이밍이 순차적으로 정렬되도록 맞추었습니다.
 
-​
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_101.png" width="400"/>
 
-최종적으로 w_pipe[0][0], w_pipe[1][1], w_pipe[2][2], w_pipe[3][3]를 묶어 출력함으로써, 
+<div align="left">
 
-lane별 0~3 cycle의 time skew가 의도적으로 반영된 weight wavefront를 구성하고, 
+그러나 Golden과 불일치하였으며 tile 0 이후 출력이 X로 발생하였고, L2 및 L3 구간에서도 input은 정상적으로 관측되었으나 weight 신호는 X로 출력되는 현상이 확인되었습니다.
 
-PE array 입력 타이밍이 순차적으로 정렬되도록 맞추었습니다.
+​이에 따라, PE(0,0)에서 수행되는 MAC 연산 로그를 확인하였습니다.
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_102.png" width="400"/>
 
-그러나 Golden과 불일치하였으며 tile 0 이후 출력이 X로 발생하였고, 
+<div align="left">
 
-L2 및 L3 구간에서도 input은 정상적으로 관측되었으나 weight 신호는 X로 출력되는 현상이 확인되었습니다.
+L1 연산 로그 분석 결과, 빨간색 영역 이후로 input과 weight의 cycle 정렬이 이루어지지 않아 Mismatch가 발생하고 있음을 확인하였습니다.
 
-​
-
-이에 따라, PE(0,0)에서 수행되는 MAC 연산 로그를 확인하였습니다.
-
-
-L1 연산 로그 분석 결과, 
-
-빨간색 영역 이후로 input과 weight의 cycle 정렬이 이루어지지 않아 Mismatch가 발생하고 있음을 확인하였습니다.
-
-​
-
-이는 Weight_Bank에 전체 lane에 대한 w_pipe를 추가하면서, 
-
-weight가 pipeline register를 한 단계 더 거치도록 구조가 변경되어 의도치 않은 1-cycle latency가 삽입되었기 때문입니다.
-
-​
+​이는 Weight_Bank에 전체 lane에 대한 w_pipe를 추가하면서, weight가 pipeline register를 한 단계 더 거치도록 구조가 변경되어 의도치 않은 1-cycle latency가 삽입되었기 때문입니다.
 
 weight의 1-cycle 지연을 보정하기 위해 v1과 동일하게 input에 1-cycle delay를 추가한 후 Simulation을 재수행하였습니다.
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_103.png" width="400"/>
+
+<div align="left">
 
 또한 L2, L3의 경우 global buffer를 통해 결과가 다음 layer의 input으로 전달되므로, 
 
- Global buffer(1-cycle latency) + weight_pipe(1-cycle latency) = Total(2-cycle latency)
+        Global buffer(1-cycle latency) + weight_pipe(1-cycle latency) = Total(2-cycle latency)
+
 에 의해 총 2-cycle latency가 발생함을 고려하여 input 경로에 2-stage register를 추가하여 보정하였습니다. 
 
-for (rr = 0; rr < 4; rr = rr + 1)
-    buf_r_data_d1[rr] <= buf_r_data[rr];
-    buf_r_data_d2[rr] <= buf_r_data_d1[rr];
+        for (rr = 0; rr < 4; rr = rr + 1)
+            buf_r_data_d1[rr] <= buf_r_data[rr];
+            buf_r_data_d2[rr] <= buf_r_data_d1[rr];
+
 보정 이후 L2 및 L3 구간에서도 input과 weight가 동일 cycle에 정렬됨을 확인하였습니다.
 
 ​
