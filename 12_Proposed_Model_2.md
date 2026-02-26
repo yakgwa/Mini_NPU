@@ -18,104 +18,96 @@ Ver.2 – Systolic Array (Output Stationary) Dataflow
 
 따라서 이번 글에서는 Ver.1 아키텍처를 기반으로, 실제 SA의 OS dataflow에 맞는 연산 구조로 재구성하고 구현 과정을 정리했습니다.
 
-​
+Proposed Model v.2는 3차 Simulation까지 진행한 이후 Roll-back 한 뒤, 재설계를 진행하였습니다. 최종 모델의 Debug 과정을 확인하려면 “Proposed Model v.2 – 4th Simulation”부터 참고하시면 됩니다.(Project Ver.1 File Download)
 
-Proposed Model v.2는 3차 Simulation까지 진행한 이후 Roll-back 한 뒤, 재설계를 진행하였습니다.
+### Revision History
 
-최종 모델의 Debug 과정을 확인하려면 “Proposed Model v.2 – 4th Simulation”부터 참고하시면 됩니다.
-
-Project Ver.1 File
-
-첨부파일initial_v2.zip파일 다운로드
-Revision History
-
-Proposed Model v2 – Update Log
-1차 Simulation
-→ w_pipe 도입으로 weight 1-cycle latency가 추가되며 input–weight timing mismatch 및 X 발생.
-
-2차 Simulation
-→ weight latency 증가에 대한 enable 보정 미흡으로 MAC에 X 누적 지속.
-
-3차 Simulation
-→ lane별 delay 조정 시도에도 X 문제 해결되지 않아 구조 복잡도 증가로 Roll-back 결정.
-
-4차 Simulation (After Roll-back)
-→ w_pipe를 NPU_Top으로 이동하고 hierarchy를 단순화하여 X 제거, 대신 1-cycle latency 발생.
-
-5차 Simulation
-→ input alignment 보정 과정에서 Global_Buffer invalid read로 X 유입 확인 및 gating 적용.
-
-6차 Simulation
-→ flush cycle 도입으로 state 조기 전환 문제 해결했으나 첫 값 drop 및 tail 누락 발생.
-
-7차 Simulation
-→ data_valid와 shift_en 분리 및 drain 확장으로 첫 값 drop과 tail 누락 해결.
-
-8차 Simulation (Final)
-→ 4-lane 및 100-sample 검증 결과 98% accuracy로 정상 동작 확인.
-Proposed Model v.2 - 1st Simulation
+    Proposed Model v2 – Update Log
+    1차 Simulation
+    → w_pipe 도입으로 weight 1-cycle latency가 추가되며 input–weight timing mismatch 및 X 발생.
+    
+    2차 Simulation
+    → weight latency 증가에 대한 enable 보정 미흡으로 MAC에 X 누적 지속.
+    
+    3차 Simulation
+    → lane별 delay 조정 시도에도 X 문제 해결되지 않아 구조 복잡도 증가로 Roll-back 결정.
+    
+    4차 Simulation (After Roll-back)
+    → w_pipe를 NPU_Top으로 이동하고 hierarchy를 단순화하여 X 제거, 대신 1-cycle latency 발생.
+    
+    5차 Simulation
+    → input alignment 보정 과정에서 Global_Buffer invalid read로 X 유입 확인 및 gating 적용.
+    
+    6차 Simulation
+    → flush cycle 도입으로 state 조기 전환 문제 해결했으나 첫 값 drop 및 tail 누락 발생.
+    
+    7차 Simulation
+    → data_valid와 shift_en 분리 및 drain 확장으로 첫 값 drop과 tail 누락 해결.
+    
+    8차 Simulation (Final)
+    → 4-lane 및 100-sample 검증 결과 98% accuracy로 정상 동작 확인.
+    
+### Proposed Model v.2 - 1st Simulation
 
 1. PE 내부에 data_pipe 추가
+    각 PE가 MAC 연산을 수행하는 동시에 입력 데이터를 인접 PE로 전달할 수 있도록, PE 내부에 data_pipe 구조를 추가하였습니다.
 
-각 PE가 MAC 연산을 수행하는 동시에 입력 데이터를 인접 PE로 전달할 수 있도록, PE 내부에 data_pipe 구조를 추가하였습니다.
-
-// data_pipe register
-logic signed [dataWidth-1:0] a_reg, b_reg;
-
-// forwarding to adjacent PE
-assign a_out = a_reg;
-assign b_out = b_reg;
-
-// input latch (1-cycle pipeline)
-always_ff @(posedge clk) begin
-    if (rst) begin
-        a_reg <= '0;
-        b_reg <= '0;
-    end 
-    else if (en) begin
-        a_reg <= a_in;
-        b_reg <= b_in;
-    end
-end
-이후 weight 경로에 data skew를 적용하기 위해, Weight_Bank.sv에 다음과 같은 pipeline 구조를 추가하였습니다.
-
-** 당시에는 sample 1개에 대한 추론만 수행하였으므로 input data skew는 차순위 검토 대상으로 두었습니다.
-
-// -------------------------------------------------
-// Weight Data Skew Pipeline
-// -------------------------------------------------
-
-reg  signed [dataWidth-1:0] w_pipe [0:3][0:3];
-wire signed [4*dataWidth-1:0] w_wavefront_packed;
-
-// diagonal tap (wavefront alignment)
-assign w_wavefront_packed = {
-    w_pipe[3][3],
-    w_pipe[2][2],
-    w_pipe[1][1],
-    w_pipe[0][0]
-};
-
-integer lane, st;
-always @(posedge clk or negedge rst_n) begin
-    if (!rst_n) begin
-        for (lane = 0; lane < 4; lane = lane + 1)
-            for (st = 0; st < 4; st = st + 1)
-                w_pipe[lane][st] <= '0;
-    end 
-    else if (pe_rst) begin
-        for (lane = 0; lane < 4; lane = lane + 1)
-            for (st = 0; st < 4; st = st + 1)
-                w_pipe[lane][st] <= '0;
-    end 
-    else begin
-        for (lane = 0; lane < 4; lane = lane + 1) begin
-            for (st = 3; st > 0; st = st - 1)
-                w_pipe[lane][st] <= w_pipe[lane][st-1];
-            w_pipe[lane][0] <= w_lane[lane];
+        // data_pipe register
+        logic signed [dataWidth-1:0] a_reg, b_reg;
+        
+        // forwarding to adjacent PE
+        assign a_out = a_reg;
+        assign b_out = b_reg;
+        
+        // input latch (1-cycle pipeline)
+        always_ff @(posedge clk) begin
+            if (rst) begin
+                a_reg <= '0;
+                b_reg <= '0;
+            end 
+            else if (en) begin
+                a_reg <= a_in;
+                b_reg <= b_in;
+            end
         end
-    end
-end
+
+    이후 weight 경로에 data skew를 적용하기 위해, Weight_Bank.sv에 다음과 같은 pipeline 구조를 추가하였습니다.(당시에는 sample 1개에 대한 추론만 수행하였으므로 input data skew는 차순위 검토 대상으로 두었습니다.)
+
+        // -------------------------------------------------
+        // Weight Data Skew Pipeline
+        // -------------------------------------------------
+        
+        reg  signed [dataWidth-1:0] w_pipe [0:3][0:3];
+        wire signed [4*dataWidth-1:0] w_wavefront_packed;
+        
+        // diagonal tap (wavefront alignment)
+        assign w_wavefront_packed = {
+            w_pipe[3][3],
+            w_pipe[2][2],
+            w_pipe[1][1],
+            w_pipe[0][0]
+        };
+        
+        integer lane, st;
+        always @(posedge clk or negedge rst_n) begin
+            if (!rst_n) begin
+                for (lane = 0; lane < 4; lane = lane + 1)
+                    for (st = 0; st < 4; st = st + 1)
+                        w_pipe[lane][st] <= '0;
+            end 
+            else if (pe_rst) begin
+                for (lane = 0; lane < 4; lane = lane + 1)
+                    for (st = 0; st < 4; st = st + 1)
+                        w_pipe[lane][st] <= '0;
+            end 
+            else begin
+                for (lane = 0; lane < 4; lane = lane + 1) begin
+                    for (st = 3; st > 0; st = st - 1)
+                        w_pipe[lane][st] <= w_pipe[lane][st-1];
+                    w_pipe[lane][0] <= w_lane[lane];
+                end
+            end
+        end
 
 Weight Skew Pipeline (w_pipe) 구조와 
 
