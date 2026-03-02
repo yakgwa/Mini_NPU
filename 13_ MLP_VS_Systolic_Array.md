@@ -149,13 +149,9 @@ fileName mapping은 다음과 같이 5-digit zero-padding을 적용합니다.
 ||MLP (Reference)|Systolic Array (Proposed)|
 |------|---|---|
 |Accuracy|96.32%|94.99% (Ref 대비 −1.33%p)|
-|inference time|순차 수행|공간적 병렬 수행|
-|Throughput (samples/s)|반복 재사용 (시간적)|PE 내부 고정(preload)|
-|병렬성 활용|제한적|높음|
-|성능 확장성|입력 길이에 종속|Array 크기에 따라 확장|
-|PPA 관점|비효율적|상대적으로 효율적|​
-
-
+|inference time|	
+87,300,235 ns (≈ 87.30 ms)|173,350,145 ns (≈ 173.35 ms)|
+|Throughput (samples/s)|11.45|23.07|
 
 ### 결과 의의
 - Inference Time 측정 한계
