@@ -148,9 +148,9 @@ fileName mapping은 다음과 같이 5-digit zero-padding을 적용합니다.
 
 ||MLP (Reference)|Systolic Array (Proposed)|
 |------|---|---|
-||Accuracy|inference time|Throughput(samples/s)|
-|MAC 수행 방식|순차 수행|공간적 병렬 수행|
-|Weight 사용|반복 재사용 (시간적)|PE 내부 고정(preload)|
+|Accuracy|96.32%|94.99% (Ref 대비 −1.33%p)|
+|inference time|순차 수행|공간적 병렬 수행|
+|Throughput (samples/s)|반복 재사용 (시간적)|PE 내부 고정(preload)|
 |병렬성 활용|제한적|높음|
 |성능 확장성|입력 길이에 종속|Array 크기에 따라 확장|
 |PPA 관점|비효율적|상대적으로 효율적|​
