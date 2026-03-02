@@ -106,155 +106,78 @@ Overflow 발생 (4-digit zero padding 미반영 → fileName mismatch)​
 
 <div align="left">
 
-
-2. Proposed Model (Systolic Array, Ver.2) – 10,000 Samples Inference
+### Proposed Model (Systolic Array, Ver.2) – 10,000 Samples Inference
 
 Proposed TB에서도 동일하게 sample 개수를 확장합니다.
 
-localparam int NUM_SAMPLES = 10000;
+        localparam int NUM_SAMPLES = 10000;
+        
 fileName mapping은 다음과 같이 5-digit zero-padding을 적용합니다.
 
-f0 = $sformatf("test_data_%05d.txt", base_idx + 0);
-Inference 수행 결과:
+        f0 = $sformatf("test_data_%05d.txt", base_idx + 0);
 
-Accuracy: 94.99%
+- Inference 수행 결과:
+    - Accuracy: 94.99%
+    - PASS: 9,499
+    - FAIL: 501
 
-PASS: 9,499
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_118.png" width="400"/>
 
-FAIL: 501
+<div align="left">
 
+### Reference vs Proposed 비교 분석
 
-3. Reference vs Proposed 비교 분석
+- Accuracy
+    - Reference Model: 96.32%
+    - Proposed Model: 94.99%
+    - Accuracy Degradation: −1.33%p (Ref 대비)
 
-3.1 Accuracy
+    - Proposed Model에서 추가적인 분류 오차가 발생하였습니다.
 
-Reference Model: 96.32%
+​- Inference Time (Simulation-based)
+    - Reference: 87,300,235 ns (≈ 87.30 ms)
+    - Proposed: 173,350,145 ns (≈ 173.35 ms)
 
-Proposed Model: 94.99%
+- 1회 inference(done 1회) 기준으로 Proposed Model의 시간이 더 길었습니다.
 
-Accuracy Degradation: −1.33%p (Ref 대비)
+- Throughput (samples/s)
+    - Systolic Array는 1회 inference에서 4 samples를 동시에 처리합니다. 따라서 throughput은 inferences/s가 아닌 samples/s 기준으로 환산해야 합니다.
+    - Reference: 11.45 samples/s
+    - Proposed: 23.07 samples/s
+    - 1회 inference 시간은 더 길지만, 병렬 처리로 인해 samples/s 기준 throughput은 Proposed가 더 높습니다.
 
-Proposed Model에서 추가적인 분류 오차가 발생하였습니다.
 
-​
+### 결과 의의
+- Inference Time 측정 한계
+    - 현재 Inference Time은 Simulation-based measurement입니다.
+    - 해당 값에는 다음이 포함될 수 있습니다:
+        - TB reset 구간
+        - idle cycle
+        - wait overhead
+        - 따라서 pure Compute Time을 대표한다고 보기 어렵습니다.
 
-3.2 Inference Time (Simulation-based)
+​    - 정확한 연산 시간 측정을 위해서는:
+        - start_inference → (실제 compute 시작 signal) → done_interrupt구간에 대해 Compute Window 기반 Time Flag를 설정하여 재측정할 필요가 있습니다.
 
-Reference: 87,300,235 ns (≈ 87.30 ms)
+### Accuracy Degradation 원인 분석
+- 이론적으로 동일한 MAC 연산 / Accumulation 방식 / Q-format / Activation Function 을 유지했다면 Reference와 Proposed는 동일 Accuracy를 보여야 합니다.
 
-Proposed: 173,350,145 ns (≈ 173.35 ms)
+​그러나 −1.33%p 차이가 발생하였으므로, 다음 두 관점에서 원인 분석이 필요합니다.
 
-1회 inference(done 1회) 기준으로 Proposed Model의 시간이 더 길었습니다.
+- Numerical Precision Loss 가능성
+    - Rounding/Truncation 위치 차이
+    - Saturation 타이밍 차이
+    - Accumulation bit-growth 처리 차이
+    - Quantization error 누적
 
-​
+- Functional / Timing Issue 가능성
+    - Input/Weight skew misalignment
+    - Flush cycle 부족
+    - Done 시점과 output 안정화 타이밍 불일치
+    - Lane별 data mapping 오류
 
-3.3 Throughput (samples/s)
+​해당 항목은 설계 과정에서 검토되었으나, Accuracy Degradation 원인 배제를 위해 Reference 대비 비교 분석을 추가로 수행이 필요합니다.
 
-Systolic Array는 1회 inference에서 4 samples를 동시에 처리합니다.
-
-따라서 throughput은 inferences/s가 아닌 samples/s 기준으로 환산해야 합니다.
-
-Reference: 11.45 samples/s
-
-Proposed: 23.07 samples/s
-
-1회 inference 시간은 더 길지만, 병렬 처리로 인해 samples/s 기준 throughput은 Proposed가 더 높습니다.
-
-​
-
-MLP (Reference)
-
-Systolic Array (Proposed)
-
-Accuracy
-
-96.32%
-
-94.99% (Ref 대비 −1.33%p)
-
-inference time
-
-87,300,235 ns (≈ 87.30 ms)
-
-173,350,145 ns (≈ 173.35 ms)
-
-Throughput (samples/s)
-
-11.45
-
-23.07
-
-4. 결과 의의
-
-4.1 Inference Time 측정 한계
-
-현재 Inference Time은 Simulation-based measurement입니다.
-
-​
-
-해당 값에는 다음이 포함될 수 있습니다:
-
-TB reset 구간
-
-idle cycle
-
-wait overhead
-
-따라서 pure Compute Time을 대표한다고 보기 어렵습니다.
-
-​
-
-정확한 연산 시간 측정을 위해서는:
-
-start_inference → (실제 compute 시작 signal) → done_interrupt
-구간에 대해 Compute Window 기반 Time Flag를 설정하여 재측정할 필요가 있습니다.
-
-​
-
-4.2 Accuracy Degradation 원인 분석
-
-이론적으로 동일한 MAC 연산 / Accumulation 방식 / Q-format / Activation Function 을 유지했다면 
-
-Reference와 Proposed는 동일 Accuracy를 보여야 합니다.
-
-​
-
-그러나 −1.33%p 차이가 발생하였으므로, 다음 두 관점에서 원인 분석이 필요합니다.
-
-(1) Numerical Precision Loss 가능성
-
-Rounding/Truncation 위치 차이
-
-Saturation 타이밍 차이
-
-Accumulation bit-growth 처리 차이
-
-Quantization error 누적
-
-(2) Functional / Timing Issue 가능성
-
-Input/Weight skew misalignment
-
-Flush cycle 부족
-
-Done 시점과 output 안정화 타이밍 불일치
-
-Lane별 data mapping 오류
-
-​
-
-해당 항목은 설계 과정에서 검토되었으나,
-
-Accuracy Degradation 원인 배제를 위해 Reference 대비 비교 분석을 추가로 수행이 필요합니다.
-
-5. 추가 검증 항목
-
-5.1 Compute Window 기반 Latency 재측정
-
-(추후 기재 예정)
-
-​
-
-5.2 Accuracy Degradation 원인 분리 분석
-
-(추후 기재 예정)
+### 추가 검증 항목
+- Compute Window 기반 Latency 재측정
+- Accuracy Degradation 원인 분리 분석
