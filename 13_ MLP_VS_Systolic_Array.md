@@ -149,8 +149,7 @@ fileName mapping은 다음과 같이 5-digit zero-padding을 적용합니다.
 ||MLP (Reference)|Systolic Array (Proposed)|
 |------|---|---|
 |Accuracy|96.32%|94.99% (Ref 대비 −1.33%p)|
-|inference time|	
-87,300,235 ns (≈ 87.30 ms)|173,350,145 ns (≈ 173.35 ms)|
+|inference time|87,300,235 ns (≈ 87.30 ms)|173,350,145 ns (≈ 173.35 ms)|
 |Throughput (samples/s)|11.45|23.07|
 
 ### 결과 의의
