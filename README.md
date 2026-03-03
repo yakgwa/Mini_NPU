@@ -13,12 +13,11 @@
 ## 📝 소개
 Mini NPU Architeture & Design & Verfication
 
-다음과 같은 내용을 작성할 수 있습니다.
 - Prologue
 - Introduce
 - TPU Origin, Architecture, Implementation, and Software
 
-필요한 기술 스택에 대한 logo는 [Mini NPU 폴더](/rtl)에서 다운로드 받을 수 있습니다.
+필요한 기술 스택은 [Mini NPU 폴더](/rtl)에서 다운로드 받을 수 있습니다.
 
 <br />
 
