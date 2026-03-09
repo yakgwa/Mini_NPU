@@ -214,6 +214,7 @@ Simulation 결과 및 waveform 분석을 통해, 입력된 activation과 preload
 ### DUT
 - ws_pe_cell.sv
 - systolic_array_1x4_ws.sw
+  
         module systolic_1x4_chain #(
           parameter int DATA_W  = 8,
           parameter int ACC_W   = 32,
@@ -263,6 +264,7 @@ Simulation 결과 및 waveform 분석을 통해, 입력된 activation과 preload
         endmodule
 
 - col_accumulators.sv
+  
         module col_accumulators #(
           parameter int ACC_W   = 32,
           parameter int NUM_COL = 4
@@ -290,6 +292,7 @@ Simulation 결과 및 waveform 분석을 통해, 입력된 activation과 preload
         endmodule
 
 - gemv_1x4_extacc_top.sv
+  
         module gemv_1x4_ws_top #(
           parameter int DATA_W  = 8,
           parameter int ACC_W   = 32,
