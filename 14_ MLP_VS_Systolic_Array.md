@@ -49,9 +49,11 @@ Create Block Design에서 Zynq Processing System IP를 추가한 뒤, 동작 주
 
 이후 Top Module인 zyNet을 Add Module로 추가하고, Run Connection Automation을 수행한 뒤 필요한 pin을 수동으로 연결하면 다음과 같은 Block Design이 구성됩니다.
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_119.png" width="400"/>
 
-Reference Block Design ​
+Reference Block Design 
 
+<div align="left">
 
 다음으로 IP 간 인터페이스 연결 및 설정에 문제가 없는지 확인하기 위해 Validate Design을 수행합니다.
 
@@ -76,6 +78,10 @@ Synthesis는 정상적으로 완료되었지만, 다음과 같은 Critical Warni
 ​Synthesis 이후 Implementation을 수행하면 설계된 로직이 FPGA 디바이스 내부 자원에 실제로 배치됩니다.
 
 ​아래 그림은 Implementation 완료 후 FPGA 디바이스 상의 placement 결과를 나타낸 것이며, RTL 로직이 PL 영역의 CLB(Configurable Logic Block) 에 배치된 것을 확인할 수 있습니다.
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_120.png" width="400"/>
+
+<div align="left">
 
 
 ## Proposed Design: Synthesis / Implementation Results (임시 조치)
@@ -163,6 +169,10 @@ Synthesis는 정상적으로 완료되었지만, 다음과 같은 Critical Warni
 Reference와 동일하게 Zynq Processing System IP를 추가한 뒤, NPU_Top을 Add Module로 포함하고 Run Connection Automation을 수행했습니다. 
 
 ​이후 필요한 pin은 수동으로 연결하여 Block Design을 구성했습니다. 다만 NPU_Top 모듈에는 AXI 관련 인터페이스가 정의되어 있지 않기 때문에, AXI 관련 IP는 제외하고 다음과 같이 Block Design을 구성했습니다.
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_121.png" width="400"/>
+
+<div align="left">
 
 NPU_Top이 .sv 형식(SystemVerilog)이었기 때문에 Add Module 단계에서 hide 처리되어 Block Design에서 인식되지 않는 문제가 있었습니다.
 
