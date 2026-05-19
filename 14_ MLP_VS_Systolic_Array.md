@@ -90,7 +90,61 @@ REF Implementation Device View
 
 <div align="left">
 
+※ REF Post-Implementation 수치 (전체, AXI 포함)
+    LUT: 7,673 / LUTRAM: 60 / FF: 4,172 / BRAM36 eq: 26.5 / IO: 11
 
+​※ Timing: Setup Violation 발생 (WNS: -1.068ns)
+    intr_0 출력 핀(LED0) 경로에서 발생하였으며, XDC output_delay 설정에 의한 것입니다.
+    자세한 내용은 5번 Issue 정리를 참고하시기 바랍니다.
 
+## Proposed Design — Block Design 구성 및 결과
+
+### Block Design 구성
+
+Reference와 동일하게 Zynq Processing System IP를 추가하고, NPU_Wrapper를 Add Module로 포함하여 Block Design을 구성하였습니다.
+
+​NPU_Top은 AXI 인터페이스가 없으므로 AXI Interconnect 없이 
+
+    FCLK_CLK0 → NPU_Wrapper clk,
+    proc_sys_reset → NPU_Wrapper rst_n 
+
+으로 직접 연결하였습니다.
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_130.png" width="400"/>
+
+Proposed Block Design
+
+<div align="left">
+
+※ NPU_Top / NPU_Wrapper가 SystemVerilog(.sv) 형식으로 작성되어 있어 Vivado Block Design에서 Add Module 시 hide 처리되어 인식되지 않는 문제가 있었습니다.
+※ 이를 해결하기 위해 NPU_Wrapper.sv를 NPU_Wrapper.v로 변환하고, SV 전용 문법인 logic → wire로 수정하였습니다. 자세한 내용은 4. Issue 정리를 참고하시기 바랍니다.
+
+### XDC / SDC 작성
+
+외부 포트에 대해 Zybo Z7-20 Master XDC 기준으로 핀 할당 및 I/O Standard를 설정하였습니다. PS FCLK_CLK0 기반 구조이므로 create_clock은 별도로 작성하지 않았습니다.
+
+    ## IOSTANDARD
+    set_property IOSTANDARD LVCMOS33 [get_ports {input_pixels_0[*]}]
+    set_property IOSTANDARD LVCMOS33 [get_ports start_inference_0]
+    set_property IOSTANDARD LVCMOS33 [get_ports input_valid_0]
+    set_property IOSTANDARD LVCMOS33 [get_ports done_interrupt_0]
+    set_property IOSTANDARD LVCMOS33 [get_ports {result_0_0[*]}]
+    set_property IOSTANDARD LVCMOS33 [get_ports {result_1_0[*]}]
+    set_property IOSTANDARD LVCMOS33 [get_ports {result_2_0[*]}]
+    set_property IOSTANDARD LVCMOS33 [get_ports {result_3_0[*]}]
+    
+    ## Pin 할당 — input_pixels_0[31:0] → Pmod JA+JB+JC+JD
+    ## start_inference_0 → SW0 / input_valid_0 → SW1 / done_interrupt_0 → LED0
+    ## result_0~3_0[3:0] → LED1~3 + 기타 핀
+    
+    ## Input/Output delay (PS FCLK 100MHz 기준, 2ns 마진)
+    set_input_delay  -clock [get_clocks *] -max 2.0 [get_ports start_inference_0]
+    set_input_delay  -clock [get_clocks *] -max 2.0 [get_ports {input_pixels_0[*]}]
+    set_input_delay  -clock [get_clocks *] -max 2.0 [get_ports input_valid_0]
+    set_output_delay -clock [get_clocks *] -max 2.0 [get_ports done_interrupt_0]
+    set_output_delay -clock [get_clocks *] -max 2.0 [get_ports {result_0_0[*]}]
+    set_output_delay -clock [get_clocks *] -max 2.0 [get_ports {result_1_0[*]}]
+    set_output_delay -clock [get_clocks *] -max 2.0 [get_ports {result_2_0[*]}]
+    set_output_delay -clock [get_clocks *] -max 2.0 [get_ports {result_3_0[*]}]
 
 
