@@ -484,17 +484,17 @@ Waveform 확인 결과, k_cnt==0 구간에서 입력될 첫 번째 input 값(72)
 
 ​이를 해결하기 위해 read 데이터 저장 조건을 k_cnt >= 1 기반 enable 구조에서 k_cnt <= cur_input_len 조건으로 변경하였습니다.
 
-    // 기존 구조 (k_cnt >= 1 조건)
-    k_cnt:           0    1    2    3   ...  30
-    inject_en:       0    1    1    1   ...   1
-    buf_r_data:     [72] [x1] [x2] [x3] ... [x30]  ← GB에서 읽힘
-    buf_r_data_d1:   X  [72] [x1] [x2] ... [x29]  ← k_cnt==0 때 저장 안 됨 (누락)
+        // 기존 구조 (k_cnt >= 1 조건)
+        k_cnt:           0    1    2    3   ...  30
+        inject_en:       0    1    1    1   ...   1
+        buf_r_data:     [72] [x1] [x2] [x3] ... [x30]  ← GB에서 읽힘
+        buf_r_data_d1:   X  [72] [x1] [x2] ... [x29]  ← k_cnt==0 때 저장 안 됨 (누락)
     
-    // 수정 후 (k_cnt <= cur_input_len 조건)
-    k_cnt:           0    1    2    3   ...  30
-    data_valid:      1    1    1    1   ...   1
-    buf_r_data:     [72] [x1] [x2] [x3] ... [x30]
-    buf_r_data_d1:  [72] [x1] [x2] [x3] ... [x29]  ← k_cnt==0부터 정상 저장
+        // 수정 후 (k_cnt <= cur_input_len 조건)
+        k_cnt:           0    1    2    3   ...  30
+        data_valid:      1    1    1    1   ...   1
+        buf_r_data:     [72] [x1] [x2] [x3] ... [x30]
+        buf_r_data_d1:  [72] [x1] [x2] [x3] ... [x29]  ← k_cnt==0부터 정상 저장
 
         // 새 capture 조건 (k_cnt==0 포함)
         wire data_valid_l23 = calc_l23 &&
