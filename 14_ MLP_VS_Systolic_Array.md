@@ -256,17 +256,16 @@ Proposed wrapper Setup Violation
         Source: mFind/o_data_valid_reg (maxFinder 내부 FF)
         Destination: intr_0 (외부 출력 핀 M14 — LED0)
 
-​- 원인은 내부 combinational path 문제가 아닌, XDC에서 설정한 set_output_delay -max 2.0으로 인해 출력 핀의 timing margin이 부족해진 것입니다.
+- 원인은 내부 combinational path 문제가 아닌, XDC에서 설정한 set_output_delay -max 2.0으로 인해 출력 핀의 timing margin이 부족해진 것입니다.
 
         ​Required time = 10ns - clock uncertainty(0.154ns) - output_delay(2.0ns) = 7.846ns
         Arrival time = 8.914ns (OBUF 전파 포함)
         Slack = -1.068ns
 
-​- intr_0은 LED 상태 표시용 핀으로 실제 타이밍 제약이 없으며, Post-Implementation Simulation에서 동작 이상 없음을 확인하였습니다.
+- intr_0은 LED 상태 표시용 핀으로 실제 타이밍 제약이 없으며, Post-Implementation Simulation에서 동작 이상 없음을 확인하였습니다.
 
 ※ Proposed Timing Violation은 PE 내부 sat_add_16 연산 경로 문제입니다. 두 violation 모두 Post-Implementation Functional/Timing Simulation에서 기능적 정확도에 영향이 없음을 확인하였습니다.
 - 자세한 분석은 5.5를 참고하시기 바랍니다.(timing_REF.rpt, timing_initial_v2_cl.rpt)
-
 
 
 
