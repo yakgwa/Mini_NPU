@@ -147,4 +147,71 @@ Proposed Block Design
     set_output_delay -clock [get_clocks *] -max 2.0 [get_ports {result_2_0[*]}]
     set_output_delay -clock [get_clocks *] -max 2.0 [get_ports {result_3_0[*]}]
 
+### Synthesis 결과
+
+NPU_Top core 기준 Post-Synthesis 결과입니다.
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_131.png" width="400"/>
+
+Proposed NPU_Top Post-Synthesis Utilization Graph(IO 132% — XDC 미적용 상태)
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_132.png" width="400"/>
+
+Proposed NPU_Top Post-Synthesis Utilization Table
+
+<div align="left">
+
+NPU_Top 기준 Post-Synthesis 결과에서 IO가 165개로 FPGA 최대 IO(125개)를 초과하였음을 확인할 수 있습니다.
+
+​이를 해결하기 위해 NPU_Wrapper를 적용하였으며, XDC 적용 후 IO가 53개로 정상 범위 내에 있음을 확인할 수 있습니다.
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_133.png" width="400"/>
+
+Proposed NPU_Wrapper Post-Synthesis Utilization Graph
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_134.png" width="400"/>
+
+Proposed NPU_Wrapper Post-Synthesis Utilization Table
+
+<div align="left">
+
+### Implementation 결과
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_135.png" width="400"/>
+
+Proposed Post-Implementation Utilization Graph
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_136.png" width="400"/>
+
+Proposed Post-Implementation Utilization Table
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_137.png" width="400"/>
+
+Proposed Implementation Device View
+
+<div align="left">
+
+
+※ Proposed Post-Implementation 수치 (NPU_Wrapper 기준)
+    LUT: 3,716 / LUTRAM: 1 / FF: 1,960 / BRAM36 eq: 14 / IO: 51
+
+​※ Timing: Setup Violation 발생 (WNS: -0.335ns)
+    자세한 내용은 4.5 Setup Timing Violation을 참고하시기 바랍니다.
+
+### Reference vs Proposed 비교 분석
+
+※ 비교 기준
+
+· REF: zyNet core (AXI 관련 로직 inst top + alw 제외) — Post-Synthesis 기준
+· Proposed: NPU_Top core — Post-Synthesis 기준
+· 동일 조건 비교를 위해 AXI를 제외한 순수 추론 로직만을 대상으로 하였습니다.
+· 수치는 report_utilization -hierarchical 결과 기반입니다.
+
+
+
+
+
+
+
+
 
