@@ -287,3 +287,44 @@ Proposed Power Report 상세
 
 <div align="left">
 
+|항목|REF(ZyNet core)|Proposed (NPU_Top)|
+|------|---|---|
+|Total On-Chip Power|1.700W|1.587W|
+|Dynamic Power|1.552W (91%)|1.444W (91%)|
+|PS7|1.400W (89%)|1.400W (97%)|
+|Logic|0.032W (2%)|0.009W (1%)|
+|BRAM|0.070W (5%)|0.015W (1%)|
+|Signals|0.029W (2%)|0.010W (1%)|
+|Clocks|0.020W (1%)|0.010W (1%)|
+|Static Power|0.148W (9%)|0.143W (9%)|
+|Junction Temperature|44.6°C|43.3°C|
+
+※ PS7 전력(1.400W)은 두 구조 모두 동일하며 전체 소비 전력의 대부분을 차지합니다.PL 로직 자체의 소비 전력은 Logic, BRAM, Signals, Clocks 항목에 반영되며, Proposed가 REF 대비 전반적으로 낮은 수치를 보입니다.
+
+- Logic: 0.032W → 0.009W (약 72% 감소)
+- BRAM: 0.070W → 0.015W (약 79% 감소)
+- Signals: 0.029W → 0.010W (약 66% 감소)
+
+​이는 Systolic Array 기반 group-serial 방식으로 동일한 PE를 반복 재사용하면서 활성화되는 하드웨어 인스턴스 수가 줄어든 결과입니다.
+
+## FPGA 배치 분석
+
+### Reference — Device Placement
+
+REF Implementation 결과, zyNet 로직이 PL 영역 상단에 집중 배치되어 있습니다. Layer_1~3가 각각 독립 모듈로 구성되어 CLB usage가 분산되어 있으며, AXI Interconnect 및 PS logic도 함께 배치되어 있습니다.
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_144.png" width="400"/>
+
+REF Implementation Device View
+
+<div align="left">
+
+### Proposed — Device Placement
+
+Proposed Implementation 결과, NPU_Top 로직이 REF 대비 좁은 영역에 집중 배치되어 있습니다. Systolic Array, Weight_Bank, Global_Buffer, Activation_Unit 등 주요 모듈이 하나의 집약된 구조로 배치되어 있습니다.
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_145.png" width="400"/>
+
+Proposed Implementation Device View
+
+<div align="left">
