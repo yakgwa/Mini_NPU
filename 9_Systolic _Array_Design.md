@@ -743,16 +743,6 @@ Controller까지 검증을 완료했으니, 이제 마지막으로 Activation Fu
 
     이 경우 전체 연산은 6 × 20 = 120번의 tile 연산 단계로 줄어들게 됩니다. 즉, 동일한 연산을 수행하더라도 array 크기가 커질수록 tile 분할 효율이 개선되고, idle PE가 감소하여 전체 실행 cycle 관점에서 더 높은 효율을 기대할 수 있습니다. 다만 이러한 효율 향상은 performance 관점에서의 비교이며, 실제 설계 시, data supply rate, interface bandwidth, PPA constraints 등을 함께 고려하여 최종 array size를 결정해야 합니다.
 
-        - 4×4 Array 사용 시 (Layer 1 기준):
-            - Weight: 30 ÷ 4 = 7 full tile + 2 잔여 → 마지막 tile에서 일부 PE가 idle
-            - Activation: 100 sample ÷ 4 = 25 tile
-            - 전체: 약 8 × 25 = 200번의 tile 연산
-
-        - 5×5 Array 사용 시 (Layer 1 기준):
-            - Weight: 30 ÷ 5 = 6 tile (정확히 분할, idle PE 없음)
-            - Activation: 100 sample ÷ 5 = 20 tile
-            - 전체: 6 × 20 = 120번의 tile 연산
-
 - 외부 인터페이스 관점 (AXI / PCIe)
 
     실제 동작 환경에서 systolic array는 외부 interface를 통해 지속적으로 데이터를 공급받습니다. 일반적으로 AXI-Lite는 제어 신호 전달을 목적으로 32-bit 폭을 사용하며, 대용량 데이터 전송을 담당하는 AXI-Full(또는 AXI-Stream)는 32/64/128/256/512-bit와 같이 2의 거듭제곱 형태의 bus width를 사용하는 것이 일반적입니다.
@@ -780,7 +770,7 @@ Controller까지 검증을 완료했으니, 이제 마지막으로 Activation Fu
 
     4×4 array는 일부 layer에서 PE utilization이 낮아질 수 있습니다. 그렇다고 항상 더 큰 array가 유리한 것은 아닙니다. 만약 데이터 공급 시간이 SA 연산 시간보다 길다면, 아무리 PE 효율이 높아도 NPU는 입력을 기다리며 idle 상태가 됩니다. 
 
-​    이 경우에는 bus bandwidth와 궁합이 좋은 4×4 구조를 사용하여, 끊김 없이 데이터를 공급하는 것이 시스템 전체 throughput을 높이는 데 유리할 수 있습니다.
+​    이 경우(데이터 공급이 연산보다 느린 경우)에는 PE 수를 늘려도 NPU는 입력을 기다리며 idle. bus bandwidth와 궁합이 좋은 4×4 구조를 사용하여, 끊김 없이 데이터를 공급하는 것이 시스템 전체 throughput을 높이는 데 유리할 수 있습니다.
 
 ​    반대로, 데이터는 충분히 빠르게 들어오지만 PE 수가 부족하여 연산이 병목이 되는 경우라면, 5×5와 같은 더 큰 array가 오히려 성능 면에서 유리할 수 있습니다.
 
