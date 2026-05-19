@@ -1,0 +1,136 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+-------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2022.2 (win64) Build 3671981 Fri Oct 14 05:00:03 MDT 2022
+| Date         : Sun Apr  5 23:15:28 2026
+| Host         : arc running 64-bit major release  (build 9200)
+| Command      : report_utilization -hierarchical -file C:/Users/mini9/Desktop/NPU/initial_v2_Claude/util_initial_v2_cl_syn_hier.rpt
+| Design       : design_1_wrapper
+| Device       : xc7z020clg400-1
+| Speed File   : -1
+| Design State : Synthesized
+-------------------------------------------------------------------------------------------------------------------------------------
+
+Utilization Design Information
+
+Table of Contents
+-----------------
+1. Utilization by Hierarchy
+
+1. Utilization by Hierarchy
+---------------------------
+
++-------------------------------------+----------------------------------------------------------------------------+------------+------------+---------+------+------+--------+--------+------------+
+|               Instance              |                                   Module                                   | Total LUTs | Logic LUTs | LUTRAMs | SRLs |  FFs | RAMB36 | RAMB18 | DSP Blocks |
++-------------------------------------+----------------------------------------------------------------------------+------------+------------+---------+------+------+--------+--------+------------+
+| design_1_wrapper                    |                                                                      (top) |       3710 |       3709 |       0 |    1 | 1966 |      0 |     28 |          0 |
+|   (design_1_wrapper)                |                                                                      (top) |          0 |          0 |       0 |    0 |    0 |      0 |      0 |          0 |
+|   design_1_i                        |                                                                   design_1 |       3710 |       3709 |       0 |    1 | 1966 |      0 |     28 |          0 |
+|     (design_1_i)                    |                                                                   design_1 |          0 |          0 |       0 |    0 |    0 |      0 |      0 |          0 |
+|     NPU_Wrapper_0                   |                                                   design_1_NPU_Wrapper_0_0 |       3667 |       3667 |       0 |    0 | 1926 |      0 |     28 |          0 |
+|       (NPU_Wrapper_0)               |                                                   design_1_NPU_Wrapper_0_0 |        224 |        224 |       0 |    0 |    0 |      0 |      0 |          0 |
+|       inst                          |                                       design_1_NPU_Wrapper_0_0_NPU_Wrapper |       3443 |       3443 |       0 |    0 | 1926 |      0 |     28 |          0 |
+|         (inst)                      |                                       design_1_NPU_Wrapper_0_0_NPU_Wrapper |         15 |         15 |       0 |    0 |    0 |      0 |      0 |          0 |
+|         npu                         |                                           design_1_NPU_Wrapper_0_0_NPU_Top |       3442 |       3442 |       0 |    0 | 1926 |      0 |     28 |          0 |
+|           (npu)                     |                                           design_1_NPU_Wrapper_0_0_NPU_Top |        552 |        552 |       0 |    0 |  647 |      0 |      0 |          0 |
+|           MAX_FINDER_GEN[0].mf      |                                         design_1_NPU_Wrapper_0_0_maxFinder |         76 |         76 |       0 |    0 |  124 |      0 |      0 |          0 |
+|           MAX_FINDER_GEN[1].mf      |                                       design_1_NPU_Wrapper_0_0_maxFinder_0 |         76 |         76 |       0 |    0 |  124 |      0 |      0 |          0 |
+|           MAX_FINDER_GEN[2].mf      |                                       design_1_NPU_Wrapper_0_0_maxFinder_1 |         77 |         77 |       0 |    0 |  124 |      0 |      0 |          0 |
+|           MAX_FINDER_GEN[3].mf      |                                       design_1_NPU_Wrapper_0_0_maxFinder_2 |         76 |         76 |       0 |    0 |  124 |      0 |      0 |          0 |
+|           au                        |                                   design_1_NPU_Wrapper_0_0_Activation_Unit |         26 |         26 |       0 |    0 |    0 |      0 |      1 |          0 |
+|             sig_inst                |                                           design_1_NPU_Wrapper_0_0_Sig_ROM |         26 |         26 |       0 |    0 |    0 |      0 |      1 |          0 |
+|           bb                        |                                         design_1_NPU_Wrapper_0_0_Bias_Bank |        194 |        194 |       0 |    0 |   25 |      0 |      0 |          0 |
+|           gb                        |                                     design_1_NPU_Wrapper_0_0_Global_Buffer |        126 |        126 |       0 |    0 |    0 |      0 |      4 |          0 |
+|           sa                        |                                    design_1_NPU_Wrapper_0_0_Systolic_Array |       1284 |       1284 |       0 |    0 |  512 |      0 |      0 |          0 |
+|             ROWS[0].COLS[0].pe_inst |                                                design_1_NPU_Wrapper_0_0_PE |         76 |         76 |       0 |    0 |   32 |      0 |      0 |          0 |
+|             ROWS[0].COLS[1].pe_inst |                                              design_1_NPU_Wrapper_0_0_PE_3 |         76 |         76 |       0 |    0 |   32 |      0 |      0 |          0 |
+|             ROWS[0].COLS[2].pe_inst |                                              design_1_NPU_Wrapper_0_0_PE_4 |         76 |         76 |       0 |    0 |   32 |      0 |      0 |          0 |
+|             ROWS[0].COLS[3].pe_inst |                                              design_1_NPU_Wrapper_0_0_PE_5 |         76 |         76 |       0 |    0 |   32 |      0 |      0 |          0 |
+|             ROWS[1].COLS[0].pe_inst |                                              design_1_NPU_Wrapper_0_0_PE_6 |         86 |         86 |       0 |    0 |   32 |      0 |      0 |          0 |
+|             ROWS[1].COLS[1].pe_inst |                                              design_1_NPU_Wrapper_0_0_PE_7 |        112 |        112 |       0 |    0 |   32 |      0 |      0 |          0 |
+|             ROWS[1].COLS[2].pe_inst |                                              design_1_NPU_Wrapper_0_0_PE_8 |         86 |         86 |       0 |    0 |   32 |      0 |      0 |          0 |
+|             ROWS[1].COLS[3].pe_inst |                                              design_1_NPU_Wrapper_0_0_PE_9 |         86 |         86 |       0 |    0 |   32 |      0 |      0 |          0 |
+|             ROWS[2].COLS[0].pe_inst |                                             design_1_NPU_Wrapper_0_0_PE_10 |         76 |         76 |       0 |    0 |   32 |      0 |      0 |          0 |
+|             ROWS[2].COLS[1].pe_inst |                                             design_1_NPU_Wrapper_0_0_PE_11 |         76 |         76 |       0 |    0 |   32 |      0 |      0 |          0 |
+|             ROWS[2].COLS[2].pe_inst |                                             design_1_NPU_Wrapper_0_0_PE_12 |         76 |         76 |       0 |    0 |   32 |      0 |      0 |          0 |
+|             ROWS[2].COLS[3].pe_inst |                                             design_1_NPU_Wrapper_0_0_PE_13 |         76 |         76 |       0 |    0 |   32 |      0 |      0 |          0 |
+|             ROWS[3].COLS[0].pe_inst |                                             design_1_NPU_Wrapper_0_0_PE_14 |         76 |         76 |       0 |    0 |   32 |      0 |      0 |          0 |
+|             ROWS[3].COLS[1].pe_inst |                                             design_1_NPU_Wrapper_0_0_PE_15 |         76 |         76 |       0 |    0 |   32 |      0 |      0 |          0 |
+|             ROWS[3].COLS[2].pe_inst |                                             design_1_NPU_Wrapper_0_0_PE_16 |         78 |         78 |       0 |    0 |   32 |      0 |      0 |          0 |
+|             ROWS[3].COLS[3].pe_inst |                                             design_1_NPU_Wrapper_0_0_PE_17 |         76 |         76 |       0 |    0 |   32 |      0 |      0 |          0 |
+|           wb                        |                                       design_1_NPU_Wrapper_0_0_Weight_Bank |        955 |        955 |       0 |    0 |  246 |      0 |     23 |          0 |
+|             L1_MEM[0].wm            |                                     design_1_NPU_Wrapper_0_0_Weight_Memory |        103 |        103 |       0 |    0 |    6 |      0 |      0 |          0 |
+|             L1_MEM[10].wm           |                     design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized9 |          0 |          0 |       0 |    0 |    0 |      0 |      1 |          0 |
+|             L1_MEM[11].wm           |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized10 |          0 |          0 |       0 |    0 |    0 |      0 |      1 |          0 |
+|             L1_MEM[12].wm           |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized11 |          7 |          7 |       0 |    0 |    0 |      0 |      1 |          0 |
+|             L1_MEM[13].wm           |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized12 |          7 |          7 |       0 |    0 |    0 |      0 |      1 |          0 |
+|             L1_MEM[14].wm           |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized13 |          6 |          6 |       0 |    0 |    0 |      0 |      1 |          0 |
+|             L1_MEM[15].wm           |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized14 |         95 |         95 |       0 |    0 |    5 |      0 |      0 |          0 |
+|             L1_MEM[16].wm           |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized15 |          0 |          0 |       0 |    0 |    0 |      0 |      1 |          0 |
+|             L1_MEM[17].wm           |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized16 |          0 |          0 |       0 |    0 |    0 |      0 |      1 |          0 |
+|             L1_MEM[18].wm           |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized17 |          0 |          0 |       0 |    0 |    0 |      0 |      1 |          0 |
+|             L1_MEM[19].wm           |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized18 |          0 |          0 |       0 |    0 |    0 |      0 |      1 |          0 |
+|             L1_MEM[1].wm            |                     design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized0 |          0 |          0 |       0 |    0 |    0 |      0 |      1 |          0 |
+|             L1_MEM[20].wm           |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized19 |          0 |          0 |       0 |    0 |    0 |      0 |      1 |          0 |
+|             L1_MEM[21].wm           |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized20 |          0 |          0 |       0 |    0 |    0 |      0 |      1 |          0 |
+|             L1_MEM[22].wm           |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized21 |          0 |          0 |       0 |    0 |    0 |      0 |      1 |          0 |
+|             L1_MEM[23].wm           |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized22 |          0 |          0 |       0 |    0 |    0 |      0 |      1 |          0 |
+|             L1_MEM[24].wm           |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized23 |         93 |         93 |       0 |    0 |    6 |      0 |      0 |          0 |
+|             L1_MEM[25].wm           |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized24 |          0 |          0 |       0 |    0 |    0 |      0 |      1 |          0 |
+|             L1_MEM[26].wm           |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized25 |        103 |        103 |       0 |    0 |    6 |      0 |      0 |          0 |
+|             L1_MEM[27].wm           |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized26 |          0 |          0 |       0 |    0 |    0 |      0 |      1 |          0 |
+|             L1_MEM[28].wm           |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized27 |          6 |          6 |       0 |    0 |    0 |      0 |      1 |          0 |
+|             L1_MEM[29].wm           |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized28 |          6 |          6 |       0 |    0 |    0 |      0 |      1 |          0 |
+|             L1_MEM[2].wm            |                     design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized1 |          0 |          0 |       0 |    0 |    0 |      0 |      1 |          0 |
+|             L1_MEM[3].wm            |                     design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized2 |          0 |          0 |       0 |    0 |    0 |      0 |      1 |          0 |
+|             L1_MEM[4].wm            |                     design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized3 |          0 |          0 |       0 |    0 |    0 |      0 |      1 |          0 |
+|             L1_MEM[5].wm            |                     design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized4 |          0 |          0 |       0 |    0 |    0 |      0 |      1 |          0 |
+|             L1_MEM[6].wm            |                     design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized5 |          0 |          0 |       0 |    0 |    0 |      0 |      1 |          0 |
+|             L1_MEM[7].wm            |                     design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized6 |         87 |         87 |       0 |    0 |    5 |      0 |      0 |          0 |
+|             L1_MEM[8].wm            |                     design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized7 |         85 |         85 |       0 |    0 |    5 |      0 |      0 |          0 |
+|             L1_MEM[9].wm            |                     design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized8 |         85 |         85 |       0 |    0 |    5 |      0 |      0 |          0 |
+|             L2_MEM[0].wm            |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized29 |         15 |         15 |       0 |    0 |    7 |      0 |      0 |          0 |
+|             L2_MEM[10].wm           |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized39 |          4 |          4 |       0 |    0 |    7 |      0 |      0 |          0 |
+|             L2_MEM[11].wm           |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized40 |          4 |          4 |       0 |    0 |    7 |      0 |      0 |          0 |
+|             L2_MEM[12].wm           |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized41 |         11 |         11 |       0 |    0 |    7 |      0 |      0 |          0 |
+|             L2_MEM[13].wm           |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized42 |         23 |         23 |       0 |    0 |    7 |      0 |      0 |          0 |
+|             L2_MEM[14].wm           |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized43 |         22 |         22 |       0 |    0 |    5 |      0 |      0 |          0 |
+|             L2_MEM[15].wm           |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized44 |         22 |         22 |       0 |    0 |    6 |      0 |      0 |          0 |
+|             L2_MEM[16].wm           |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized45 |         19 |         19 |       0 |    0 |    7 |      0 |      0 |          0 |
+|             L2_MEM[17].wm           |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized46 |          4 |          4 |       0 |    0 |    7 |      0 |      0 |          0 |
+|             L2_MEM[18].wm           |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized47 |          4 |          4 |       0 |    0 |    7 |      0 |      0 |          0 |
+|             L2_MEM[19].wm           |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized48 |          4 |          4 |       0 |    0 |    7 |      0 |      0 |          0 |
+|             L2_MEM[1].wm            |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized30 |          4 |          4 |       0 |    0 |    7 |      0 |      0 |          0 |
+|             L2_MEM[2].wm            |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized31 |          3 |          3 |       0 |    0 |    6 |      0 |      0 |          0 |
+|             L2_MEM[3].wm            |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized32 |          4 |          4 |       0 |    0 |    7 |      0 |      0 |          0 |
+|             L2_MEM[4].wm            |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized33 |          4 |          4 |       0 |    0 |    7 |      0 |      0 |          0 |
+|             L2_MEM[5].wm            |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized34 |          4 |          4 |       0 |    0 |    7 |      0 |      0 |          0 |
+|             L2_MEM[6].wm            |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized35 |          4 |          4 |       0 |    0 |    7 |      0 |      0 |          0 |
+|             L2_MEM[7].wm            |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized36 |          4 |          4 |       0 |    0 |    7 |      0 |      0 |          0 |
+|             L2_MEM[8].wm            |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized37 |          4 |          4 |       0 |    0 |    7 |      0 |      0 |          0 |
+|             L2_MEM[9].wm            |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized38 |          3 |          3 |       0 |    0 |    6 |      0 |      0 |          0 |
+|             L3_MEM[0].wm            |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized49 |         31 |         31 |       0 |    0 |    7 |      0 |      0 |          0 |
+|             L3_MEM[1].wm            |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized50 |          5 |          5 |       0 |    0 |    7 |      0 |      0 |          0 |
+|             L3_MEM[2].wm            |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized51 |         18 |         18 |       0 |    0 |    8 |      0 |      0 |          0 |
+|             L3_MEM[3].wm            |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized52 |         19 |         19 |       0 |    0 |    8 |      0 |      0 |          0 |
+|             L3_MEM[4].wm            |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized53 |          5 |          5 |       0 |    0 |    7 |      0 |      0 |          0 |
+|             L3_MEM[5].wm            |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized54 |          8 |          8 |       0 |    0 |    7 |      0 |      0 |          0 |
+|             L3_MEM[6].wm            |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized55 |          5 |          5 |       0 |    0 |    7 |      0 |      0 |          0 |
+|             L3_MEM[7].wm            |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized56 |          5 |          5 |       0 |    0 |    7 |      0 |      0 |          0 |
+|             L3_MEM[8].wm            |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized57 |          5 |          5 |       0 |    0 |    7 |      0 |      0 |          0 |
+|             L3_MEM[9].wm            |                    design_1_NPU_Wrapper_0_0_Weight_Memory__parameterized58 |          5 |          5 |       0 |    0 |    8 |      0 |      0 |          0 |
+|     proc_sys_reset_0                |                                                design_1_proc_sys_reset_0_0 |         19 |         18 |       0 |    1 |   40 |      0 |      0 |          0 |
+|       U0                            |                                 design_1_proc_sys_reset_0_0_proc_sys_reset |         19 |         18 |       0 |    1 |   40 |      0 |      0 |          0 |
+|         (U0)                        |                                 design_1_proc_sys_reset_0_0_proc_sys_reset |          0 |          0 |       0 |    0 |    5 |      0 |      0 |          0 |
+|         EXT_LPF                     |                                            design_1_proc_sys_reset_0_0_lpf |          6 |          5 |       0 |    1 |   17 |      0 |      0 |          0 |
+|           (EXT_LPF)                 |                                            design_1_proc_sys_reset_0_0_lpf |          2 |          1 |       0 |    1 |    9 |      0 |      0 |          0 |
+|           ACTIVE_LOW_AUX.ACT_LO_AUX |                                       design_1_proc_sys_reset_0_0_cdc_sync |          2 |          2 |       0 |    0 |    4 |      0 |      0 |          0 |
+|           ACTIVE_LOW_EXT.ACT_LO_EXT |                                     design_1_proc_sys_reset_0_0_cdc_sync_0 |          2 |          2 |       0 |    0 |    4 |      0 |      0 |          0 |
+|         SEQ                         |                                   design_1_proc_sys_reset_0_0_sequence_psr |         13 |         13 |       0 |    0 |   18 |      0 |      0 |          0 |
+|           (SEQ)                     |                                   design_1_proc_sys_reset_0_0_sequence_psr |          8 |          8 |       0 |    0 |   12 |      0 |      0 |          0 |
+|           SEQ_COUNTER               |                                        design_1_proc_sys_reset_0_0_upcnt_n |          5 |          5 |       0 |    0 |    6 |      0 |      0 |          0 |
+|     processing_system7_0            |                                            design_1_processing_system7_0_0 |         24 |         24 |       0 |    0 |    0 |      0 |      0 |          0 |
+|       (processing_system7_0)        |                                            design_1_processing_system7_0_0 |          0 |          0 |       0 |    0 |    0 |      0 |      0 |          0 |
+|       inst                          | design_1_processing_system7_0_0_processing_system7_v5_5_processing_system7 |         24 |         24 |       0 |    0 |    0 |      0 |      0 |          0 |
++-------------------------------------+----------------------------------------------------------------------------+------------+------------+---------+------+------+--------+--------+------------+
+
+
