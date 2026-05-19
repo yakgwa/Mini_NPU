@@ -281,6 +281,49 @@ Roll-back 이전에 발생한 문제의 원인이 w_pipe로 확인됨에 따라,
 
 ​이와 함께 분리되어 있던 PE와 PE_Systolic_Cell을 다시 단일 PE로 통합하고, PE 내부에 data_pipe를 재적용하여 module hierarchy를 단순화하였습니다.(PE_Systolic_Cell을 제거하고 PE로 통합함으로써 MAC 연산과 data_pipe 경로를 하나의 모듈에서 처리하도록 정리하였고, 이에 따라 enable·reset·latency를 일관되게 관리할 수 있게 되었습니다. 또한 data_pipe의 1-cycle latency가 PE 내부에 고정되면서 상위 모듈에서 별도의 delay 보정 로직을 둘 필요가 줄어들었고, 전체 module hierarchy도 단순해졌습니다.)
 
+### Proposed Model v.2 - 4.1th w_pipe — NPU_Top으로 이동
+
+w_pipe 로직을 Weight_Bank에서 제거하고 NPU_Top 내부에서 직접 관리하도록 재구성하였습니다. 이를 통해 Weight_Bank는 weight 값 출력만 담당하고, skew 로직은 상위 모듈에서 통합 제어하는 구조로 정리하였습니다.
+
+    // (10) wavefront: weight pipe — NPU_Top 내부
+    wire signed [dataWidth-1:0] w_lane [3:0];
+    
+    assign w_lane[0] = w_bank_out[1*dataWidth-1 : 0*dataWidth];
+    assign w_lane[1] = w_bank_out[2*dataWidth-1 : 1*dataWidth];
+    assign w_lane[2] = w_bank_out[3*dataWidth-1 : 2*dataWidth];
+    assign w_lane[3] = w_bank_out[4*dataWidth-1 : 3*dataWidth];
+    
+    reg  signed [dataWidth-1:0] w_pipe [0:3][0:3];
+    wire signed [4*dataWidth-1:0] w_wavefront_packed;
+    
+    assign w_wavefront_packed = {
+        w_pipe[3][3],
+        w_pipe[2][2],
+        w_pipe[1][1],
+        w_pipe[0][0]
+    };
+    
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            for (lane = 0; lane < 4; lane = lane + 1)
+                for (st = 0; st < 4; st = st + 1)
+                    w_pipe[lane][st] <= '0;
+        end else begin
+            if (pe_rst) begin
+                for (lane = 0; lane < 4; lane = lane + 1)
+                    for (st = 0; st < 4; st = st + 1)
+                        w_pipe[lane][st] <= '0;
+            end else if (shift_en) begin
+                for (lane = 0; lane < 4; lane = lane + 1) begin
+                    for (st = 3; st > 0; st = st - 1)
+                        w_pipe[lane][st] <= w_pipe[lane][st-1];
+                    w_pipe[lane][0] <= push_en ? w_lane[lane] : '0;
+                end
+            end
+        end
+    end
+
+
 이후 Simulation을 재수행한 결과, L1·L2·L3 전 구간에서 X 없이 모든 신호가 정상적으로 동작함을 확인하였습니다. 
 
 다만 w_pipe 적용으로 인해 모든 layer에서 weight 경로에 1-cycle latency가 추가로 발생함을 확인하였습니다.
