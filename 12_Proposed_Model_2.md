@@ -155,6 +155,10 @@ weight의 1-cycle 지연을 보정하기 위해 v1과 동일하게 input에 1-cy
 
 보정 이후 L2 및 L3 구간에서도 input과 weight가 동일 cycle에 정렬됨을 확인하였습니다.
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_122.png" width="400"/>
+
+<div align="left">
+
 ### Proposed Model v.2 - 2nd Simulation
 
 1st Simulation에서 4개 연산 결과 이후 X가 출력되는 문제가 발생하였으며, 초기에는 연산 수행 state_1 (CALC_L1) → 결과 저장 state_2 (BUFFER_WR_L1) → tile 변경과 함께 state_1으로 복귀하는 전이 구간에서 X 값이 유입된 것으로 원인을 추정하였습니다.
