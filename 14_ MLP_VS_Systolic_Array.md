@@ -209,8 +209,63 @@ Proposed Implementation Device View
 
 ### Area
 
+|Resource|REF(ZyNet core)|Proposed (NPU_Top)|절감률|
+|------|---|---|---|
+|LUT|7,353|3,442|-53.2%|
+|FF|2,922|1,926|-34.1%|
+|BRAM36 eq|26.5|14.0|-47.2%|
+|DSP|0|0|동일|
+
+LUT, FF, BRAM 전 항목에서 유의미한 절감이 확인되었습니다. 주요 원인은 두 구조의 하드웨어 구성 방식 차이에 있습니다.
+
+​REF(zyNet)는 Layer_1(30개), Layer_2(20개), Layer_3(10개) 총 60개의 독립 뉴런 모듈로 구성되어 있으며, 각 모듈에 곱셈기, 누산기, activation이 별도로 배치됩니다. Sig_ROM 역시 53개의 개별 RAMB18 인스턴스로 구성되어 있습니다.
+
+​반면 Proposed는 4×4 Systolic Array 1개를 시분할 재사용하여 모든 뉴런 연산을 처리합니다. MAC 하드웨어는 PE 16개로 고정되고, group iteration으로 60개 뉴런을 커버하는 구조입니다. Sig_ROM도 Activation Unit 내 1개 인스턴스로 공유되어 BRAM 사용량이 크게 감소하였습니다.
 
 
+※ 정리
+
+- LUT -53.2%: SA 시분할 재사용으로 MAC 하드웨어 중복 제거
+- BRAM -47.2%: Sig_ROM 53개 → 1개 공유 인스턴스로 통합
+- FF -34.1%: 독립 accumulator 제거 및 pipeline register 공유
+- util_REF_syn_hier.rpt, util_initial_v2_cl_syn_hier.rpt, util_REF_imp_hier.rpt, util_initial_v2_cl_imp_hier.rpt 참고
+
+### Timing
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_138.png" width="400"/>
+
+REF wrapper Setup Violation
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_139.png" width="400"/>
+
+Proposed wrapper Setup Violation
+
+<div align="left">
+
+|항목|REF(ZyNet core)|Proposed (NPU_Top)|
+|------|---|---|
+|WNS|-1.068ns (Violation)|-0.335ns (Violation)|
+|TNS|-1.068ns|-9.151ns|
+|Failing Endpoints|1|83 / 5,298|
+|Critical Path|mFind → intr_0 출력 핀 (OBUF)|PE sat_add_16, CARRY4×7, Logic 12 levels|
+
+
+※ REF Timing Violation 분석
+- REF의 violation은 Proposed와 성격이 다릅니다.
+
+        Source: mFind/o_data_valid_reg (maxFinder 내부 FF)
+        Destination: intr_0 (외부 출력 핀 M14 — LED0)
+
+​- 원인은 내부 combinational path 문제가 아닌, XDC에서 설정한 set_output_delay -max 2.0으로 인해 출력 핀의 timing margin이 부족해진 것입니다.
+
+        ​Required time = 10ns - clock uncertainty(0.154ns) - output_delay(2.0ns) = 7.846ns
+        Arrival time = 8.914ns (OBUF 전파 포함)
+        Slack = -1.068ns
+
+​- intr_0은 LED 상태 표시용 핀으로 실제 타이밍 제약이 없으며, Post-Implementation Simulation에서 동작 이상 없음을 확인하였습니다.
+
+※ Proposed Timing Violation은 PE 내부 sat_add_16 연산 경로 문제입니다. 두 violation 모두 Post-Implementation Functional/Timing Simulation에서 기능적 정확도에 영향이 없음을 확인하였습니다.
+- 자세한 분석은 5.5를 참고하시기 바랍니다.(timing_REF.rpt, timing_initial_v2_cl.rpt)
 
 
 
