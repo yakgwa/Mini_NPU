@@ -741,7 +741,7 @@ Controller까지 검증을 완료했으니, 이제 마지막으로 Activation Fu
 
 ​    ​따라서 전체 연산은 대략적으로 8 (weight tile 수, idle 포함) × 25 (activation tile 수) 로, 총 200번​의 tile 연산 단계가 소요됩니다. 반면 5×5 array를 사용할 경우, Layer1 기준으로 weight는 6개의 tile로 정확히 분할되며 idle PE가 발생하지 않습니다. 또한 activation 역시 5개 단위로 처리되므로 sample 100개에 대해 20개의 tile 이 필요합니다. 전체는 약 6 × 20 = 120번의 tile 연산을 합니다.
 
-    이 경우 전체 연산은 6 × 20 = 120번의 tile 연산 단계로 줄어들게 됩니다. 즉, 동일한 연산을 수행하더라도 array 크기가 커질수록 tile 분할 효율이 개선되고, idle PE가 감소하여 전체 실행 cycle 관점에서 더 높은 효율을 기대할 수 있습니다. 다만 이러한 효율 향상은 performance 관점에서의 비교이며, 실제 설계 시, data supply rate, interface bandwidth, PPA constraints 등을 함께 고려하여 최종 array size를 결정해야 합니다.
+이 경우 전체 연산은 6 × 20 = 120번의 tile 연산 단계로 줄어들게 됩니다. 즉, 동일한 연산을 수행하더라도 array 크기가 커질수록 tile 분할 효율이 개선되고, idle PE가 감소하여 전체 실행 cycle 관점에서 더 높은 효율을 기대할 수 있습니다. 다만 이러한 효율 향상은 performance 관점에서의 비교이며, 실제 설계 시, data supply rate, interface bandwidth, PPA constraints 등을 함께 고려하여 최종 array size를 결정해야 합니다.
 
 - 외부 인터페이스 관점 (AXI / PCIe)
 
