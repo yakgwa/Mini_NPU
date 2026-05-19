@@ -607,6 +607,12 @@ shift는 tail drain을 위해 유지하되, 유효 데이터 주입은 k_cnt <= 
 
 이때 drain 구간(k_cnt > cur_input_len)에서는 shift_en은 유지되지만 push_en은 deassert되므로, stage0에는 0(bubble)을 주입하여 invalid 값이 pipe로 전파되지 않도록 차단하였습니다.
 
+        k_cnt:      29   30   31   32   33
+        shift_en:    1    1    1    1    1   ← tail 구간도 유지
+        push_en:     1    1    0    0    0   ← cur_input_len 이후 차단
+        stage0:    [x29][x30][ 0 ][ 0 ][ 0 ] ← bubble 주입
+        pipe 전파:       [x30이 SA 끝까지 이동]
+
 ​해당 수정 이후 마지막 MAC 결과가 정상적으로 누적되는 것을 확인하였으며, sample_0000에 대해 PASS 결과를 확인하였습니다.
 
         ============================================================
