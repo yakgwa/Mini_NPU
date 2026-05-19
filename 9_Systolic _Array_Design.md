@@ -739,24 +739,24 @@ Controller까지 검증을 완료했으니, 이제 마지막으로 Activation Fu
 
     ​먼저 Layer1(30) 을 기준으로 살펴보면, 4×4 array를 사용할 경우 한 tile에서 4개씩 처리하므로 총 7개의 full tile과 2개의 잔여(weight) 가 발생합니다. 이로 인해 마지막 tile에서는 일부 PE만 활성화되고, 나머지 PE는 IDLE 상태에 들어가게 됩니다. 또한 input activation을 4개 단위로 처리한다고 가정하면, sample 100개에 대해 25개의 tile 이 필요합니다. 전체는 약 8 × 25 = 200번의 tile 연산을 합니다.
 
-​    따라서 전체 연산은 대략적으로 8 (weight tile 수, idle 포함) × 25 (activation tile 수) 로, 총 200번​의 tile 연산 단계가 소요됩니다.
+​    ​따라서 전체 연산은 대략적으로 8 (weight tile 수, idle 포함) × 25 (activation tile 수) 로, 총 200번​의 tile 연산 단계가 소요됩니다.
 
     ​반면 5×5 array를 사용할 경우, Layer1 기준으로 weight는 6개의 tile로 정확히 분할되며 idle PE가 발생하지 않습니다. 또한 activation 역시 5개 단위로 처리되므로 sample 100개에 대해 20개의 tile 이 필요합니다. 전체는 약 6 × 20 = 120번의 tile 연산을 합니다.
 
 
-    이 경우 전체 연산은 6 × 20 = 120번의 tile 연산 단계로 줄어들게 됩니다. 즉, 동일한 연산을 수행하더라도 array 크기가 커질수록 tile 분할 효율이 개선되고, idle PE가 감소하여 전체 실행 cycle 관점에서 더 높은 효율을 기대할 수 있습니다
+    ​이 경우 전체 연산은 6 × 20 = 120번의 tile 연산 단계로 줄어들게 됩니다. 즉, 동일한 연산을 수행하더라도 array 크기가 커질수록 tile 분할 효율이 개선되고, idle PE가 감소하여 전체 실행 cycle 관점에서 더 높은 효율을 기대할 수 있습니다
 
     ​다만 이러한 효율 향상은 performance 관점에서의 비교이며, 실제 설계 시, data supply rate, interface bandwidth, PPA constraints 등을 함께 고려하여 최종 array size를 결정해야 합니다.
 
-        - 4×4 Array 사용 시 (Layer 1 기준):
-        - Weight: 30 ÷ 4 = 7 full tile + 2 잔여 → 마지막 tile에서 일부 PE가 idle
-        - Activation: 100 sample ÷ 4 = 25 tile
-        - 전체: 약 8 × 25 = 200번의 tile 연산
+            - 4×4 Array 사용 시 (Layer 1 기준):
+            - Weight: 30 ÷ 4 = 7 full tile + 2 잔여 → 마지막 tile에서 일부 PE가 idle
+            - Activation: 100 sample ÷ 4 = 25 tile
+            - 전체: 약 8 × 25 = 200번의 tile 연산
 
-        - 5×5 Array 사용 시 (Layer 1 기준):
-        - Weight: 30 ÷ 5 = 6 tile (정확히 분할, idle PE 없음)
-        - Activation: 100 sample ÷ 5 = 20 tile
-        - 전체: 6 × 20 = 120번의 tile 연산
+            - 5×5 Array 사용 시 (Layer 1 기준):
+            - Weight: 30 ÷ 5 = 6 tile (정확히 분할, idle PE 없음)
+            - Activation: 100 sample ÷ 5 = 20 tile
+            - 전체: 6 × 20 = 120번의 tile 연산
 
 - 외부 인터페이스 관점 (AXI / PCIe)
 
