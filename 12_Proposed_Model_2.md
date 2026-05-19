@@ -1107,6 +1107,111 @@ Vivado는 async read 메모리를 BRAM이 아닌 distributed RAM으로 추론하
 
 ​※ sync GB가 이미 동등한 1-cycle latency를 제공하므로 이중 지연이 발생하지 않습니다.
 
+- sat_arith_pkg — 공용 패키지 분리
+
+기존 PE.sv와 Activation_Unit.sv에는 동일한 sat_add_w 함수가 각각 별도로 정의되어 있었습니다. 
+
+두 모듈 중 하나를 수정할 경우 다른 모듈에도 동일한 수정이 필요한 유지보수 위험이 존재하였습니다.
+
+    // sat_arith_pkg.sv — 공용 패키지
+    package sat_arith_pkg;
+        function automatic logic signed [15:0] sat_add_16(
+            input logic signed [15:0] x,
+            input logic signed [15:0] y
+        );
+            ...
+        endfunction
+    endpackage
+    
+    // PE.sv / Activation_Unit.sv — 패키지 import
+    module PE
+        import sat_arith_pkg::*;
+    ...
+
+※ 현재 sat_add_16은 dataWidth=8 기준 W=16으로 고정되어 있습니다.
+
+※ dataWidth 파라미터를 변경할 경우 패키지 함수도 함께 수정이 필요하며, 이 부분은 향후 개선 사항으로 남겨두었습니다.    
+
+- PE / Systolic_Array — clr/rst 분리
+
+기존 Systolic_Array에서는 PE의 clr 포트에 rst 신호를 직접 연결하고 있었습니다. 
+
+이 구조에서는 reset과 accumulator clear가 항상 동시에 동작하여, 독립적인 clr 제어가 불가능합니다.
+
+    // 기존 (clr/rst 동일 신호)
+    PE pe_inst (
+        .rst (rst),
+        .clr (rst),   // rst와 동일하게 연결
+        ...
+    );
+    
+    // 수정 (clr/rst 분리)
+    PE pe_inst (
+        .rst (rst),
+        .clr (clr),   // 별도 신호로 분리
+        ...
+    );
+
+Systolic_Array에 clr 포트를 별도로 추가하고, NPU_Top에서 pe_clr 신호를 독립적으로 구동하도록 수정하였습니다.
+
+- NPU_Top — done_interrupt pulse화
+
+기존 done_interrupt는 DONE state에 진입한 이후 계속 1을 유지하는 level 신호였습니다. 
+
+이 경우 후단 로직에서 done을 엣지로 인식하지 않으면 중복 트리거가 발생할 수 있습니다.
+
+    // 기존 (level 신호 — DONE state 내내 유지)
+    DONE: begin
+        done_interrupt <= 1;
+    end
+    
+    // 수정 (1-cycle pulse)
+    // FSM 루프 상단에서 매 cycle 리셋
+    done_interrupt <= 1'b0;
+    ...
+    // DONE 진입 시 1-cycle만 assert
+    if (k_cnt == 11) begin
+        mf_valid_pulse <= 1'b1;
+        state          <= DONE;
+        done_interrupt <= 1'b1;   // 다음 cycle에 자동으로 0으로 복귀
+    end
+
+- NPU_Wrapper — IO pin 축소
+
+합성 시 NPU_Top의 result 포트(32bit × 4 = 128핀)가 FPGA 구현 시 pin 제약 문제를 야기할 수 있었습니다. 
+
+NPU_Wrapper를 추가하여 외부 노출은 4bit로 축소하되, 내부 32bit는 유지하여 향후 AXI 확장에 대비하였습니다.
+
+    // NPU_Wrapper.sv
+    module NPU_Wrapper (
+        ...
+        output logic [3:0]  result_0,   // 외부: 4bit
+        output logic [3:0]  result_1,
+        output logic [3:0]  result_2,
+        output logic [3:0]  result_3
+    );
+        wire [31:0] full_result_0, full_result_1,
+                    full_result_2, full_result_3;
+    
+        NPU_Top npu ( ... );   // 내부: 32bit 유지
+    
+        assign result_0 = full_result_0[3:0];
+        assign result_1 = full_result_1[3:0];
+        assign result_2 = full_result_2[3:0];
+        assign result_3 = full_result_3[3:0];
+    endmodule
+
+- FLUSH_CYCLES 이론적 근거
+
+최종 코드에서 FLUSH_CYCLES = 8로 설정되어 있습니다. 이 값의 이론적 근거는 다음과 같습니다.   
+
+|구성 요소|최대 지연|설명|
+|------|---|---|
+|Row (input) skew|3 cycle|lane0~3 중 lane3이 가장 늦게 SA에 도달 (3-cycle skew)|
+|Col (weight) skew|3 cycle|w_pipe diagonal tap — lane3이 3-cycle 지연|
+|SA 내부 전파|1 cycle|	PE 내부 data_pipe 1-cycle latency|
+|여유분|1 cycle|경계 조건 마진
+
 ### What’s Next
 
 이번에는 mini-NPU를 구현하면서 겪었던 debug 과정과 구조 안정화 작업을 중심으로 정리해보았습니다. 다음에는 조금 더 확장된 관점에서 설계를 살펴보려고 합니다.
