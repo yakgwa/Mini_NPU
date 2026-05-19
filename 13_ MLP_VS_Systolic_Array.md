@@ -138,49 +138,32 @@ Proposed Model 10,000-sample inference 결과
 
 - Proposed Model은 4-lane 병렬 구조로, 1회 inference(done 1회)에 4개 sample을 동시에 처리합니다. 따라서 단순 실행 시간만으로는 두 구조를 직접 비교하기 어려우며, sample당 평균 latency 기준으로 비교하는 것이 적절합니다.
 
-- Throughput (samples/s)
-    - Systolic Array는 1회 inference에서 4 samples를 동시에 처리합니다. 따라서 throughput은 inferences/s가 아닌 samples/s 기준으로 환산해야 합니다.
-    - Reference: 11.45 samples/s
-    - Proposed: 23.07 samples/s
-    - 1회 inference 시간은 더 길지만, 병렬 처리로 인해 samples/s 기준 throughput은 Proposed가 더 높습니다.
-
-||MLP (Reference)|Systolic Array (Proposed)|
+|Metric|MLP (Reference)|Systolic Array (Proposed)|
 |------|---|---|
-|Accuracy|96.32%|94.99% (Ref 대비 −1.33%p)|
-|inference time|87,300,235 ns (≈ 87.30 ms)|173,350,145 ns (≈ 173.35 ms)|
-|Throughput (samples/s)|11.45|23.07|
+|Accuracy|96.32%|96.32%|
+|Total Inference time(sample 10000)|87,300,235 ns (≈ 87.30 ms)|174,150,145 ns (≈ 174.15 ms)|
+|Average latency per sample|8,730.02 ns (≈ 8.73 μs)|17,415.01 ns (≈ 17.42 μs)|
+|Throughput (samples/s)|114,547|57,422|
+|Relative speed|1.00×|0.50×|
+|Accuracy difference|baseline|0.00%p|
 
 ### 결과 의의
-- Inference Time 측정 한계
-    - 현재 Inference Time은 Simulation-based measurement입니다.
-    - 해당 값에는 다음이 포함될 수 있습니다:
-        - TB reset 구간
-        - idle cycle
-        - wait overhead
-        - 따라서 pure Compute Time을 대표한다고 보기 어렵습니다.
+본 실험에서는 기존 MLP 구조와 4×4 Systolic Array 구조를 비교하였습니다.
 
-​    - 정확한 연산 시간 측정을 위해서는:
-        - start_inference → (실제 compute 시작 signal) → done_interrupt구간에 대해 Compute Window 기반 Time Flag를 설정하여 재측정할 필요가 있습니다.
+두 구조는 동일한 정확도(96.32%)를 보였으므로, Systolic Array를 적용하더라도 모델의 기능적 정확도는 유지됨을 확인하였습니다. 다만 전체 실행 시간은 Proposed 구조가 더 길게 측정되었습니다. 
 
-### Accuracy Degradation 원인 분석
-- 이론적으로 동일한 MAC 연산 / Accumulation 방식 / Q-format / Activation Function 을 유지했다면 Reference와 Proposed는 동일 Accuracy를 보여야 합니다.
+​Proposed Model은 4-lane 병렬 구조로 1회에 4개 sample을 동시에 처리하지만, flush, BUFFER_WR 구간, FSM 제어와 같은 시스템 수준 오버헤드가 병렬 처리의 이점을 상쇄하였습니다.
 
-​그러나 −1.33%p 차이가 발생하였으므로, 다음 두 관점에서 원인 분석이 필요합니다.
+또한 본 설계에서는 4×4 규모의 소규모 Systolic Array를 사용하였기 때문에, 이러한 오버헤드의 상대적 비중이 더욱 크게 나타났습니다. 
 
-- Numerical Precision Loss 가능성
-    - Rounding/Truncation 위치 차이
-    - Saturation 타이밍 차이
-    - Accumulation bit-growth 처리 차이
-    - Quantization error 누적
+더 큰 규모의 Systolic Array를 사용하는 경우 연산량 대비 오버헤드의 상대적 비중이 감소하여, 병렬 계산의 이점이 실제 성능 향상으로 이어질 가능성이 높습니다.
 
-- Functional / Timing Issue 가능성
-    - Input/Weight skew misalignment
-    - Flush cycle 부족
-    - Done 시점과 output 안정화 타이밍 불일치
-    - Lane별 data mapping 오류
+정리하면 다음과 같습니다.
 
-​해당 항목은 설계 과정에서 검토되었으나, Accuracy Degradation 원인 배제를 위해 Reference 대비 비교 분석을 추가로 수행이 필요합니다.
+- 정확도는 기존 구조와 동일하게 유지되었습니다. Systolic Array 기반 병렬 계산 구조가 정상적으로 동작함을 확인하였습니다.
 
-### 추가 검증 항목
-- Compute Window 기반 Latency 재측정
-- Accuracy Degradation 원인 분리 분석
+- 다만 flush, BUFFER_WR 구간, FSM 제어와 같은 시스템 수준 오버헤드로 인해 전체 throughput 향상은 나타나지 않았습니다. 이는 소규모 SA 설계에서 나타나는 구조적 특성으로, 규모 확장 시 개선될 수 있습니다.
+
+- 추후 flush cycle 감소, BUFFER_WR 구간 최적화, dataflow 개선을 통해 Systolic Array의 병렬 처리 이점을 실제 throughput 향상으로 연결할 수 있을 것입니다.
+
+
