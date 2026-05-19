@@ -527,6 +527,32 @@ Waveform 확인 결과, k_cnt==0 구간에서 입력될 첫 번째 input 값(72)
 
 ​그 결과 마지막 wavefront가 Systolic Array 내부를 끝까지 전파하지 못하고 중간에서 차단되어, 최종 누적 결과 일부가 반영되지 않는 현상이 발생하였습니다.
 
+6차의 flush cycle은 마지막 데이터가 pipe에 진입한 이후 SA 내부를 전파하는 시간을 확보하는 것입니다.
+
+반면 여기서 다루는 tail 누락은 그보다 앞 단계, 즉 마지막 데이터 자체가 shift_en 조기 종료로 인해 pipe에 진입조차 하지 못하는 문제입니다.
+
+        [ 6차 flush cycle 문제 ]
+        k_cnt:     ...  29   30   31   32   33   34      ← calc_end_k = 30+1+6 = 37
+        shift_en:  ...   1    0    0    0    0    0      ← k_cnt>30에서 꺼짐
+        pipe:      ... [x29][---][---][---][---][---]   ← 마지막 데이터 pipe 진입 후
+        SA 전파:   ...                 [x29 전파 중]    ← flush 없으면 state 전환으로 차단
+
+        [ 7.2 shift window 조기 종료 문제 ]
+        lane:       0    1    2    3
+        skew:      +0   +1   +2   +3  cycle
+
+        k_cnt=30 (cur_input_len):
+          lane0 마지막 데이터 → k_cnt=30에 pipe 진입 ✓
+          lane1 마지막 데이터 → k_cnt=31에 pipe 진입 필요
+          lane2 마지막 데이터 → k_cnt=32에 pipe 진입 필요
+          lane3 마지막 데이터 → k_cnt=33에 pipe 진입 필요
+
+        shift_en (기존): k_cnt <= cur_input_len(30) 까지만 유지
+          → lane1~3 마지막 데이터: pipe 진입 전에 shift 중단 ✗ (tail 누락)
+
+        shift_en (수정): k_cnt <= cur_input_len + MAX_LANE_SKEW(4) 까지 유지
+          → lane0~3 마지막 데이터: 모두 정상 pipe 진입 ✓
+
 <div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_114.png" width="400"/>
 
 <div align="left">
