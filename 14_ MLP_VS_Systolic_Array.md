@@ -267,5 +267,23 @@ Proposed wrapper Setup Violation
 ※ Proposed Timing Violation은 PE 내부 sat_add_16 연산 경로 문제입니다. 두 violation 모두 Post-Implementation Functional/Timing Simulation에서 기능적 정확도에 영향이 없음을 확인하였습니다.
 - 자세한 분석은 5.5를 참고하시기 바랍니다.(timing_REF.rpt, timing_initial_v2_cl.rpt)
 
+### Power
 
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_140.png" width="400"/>
+
+REF Power Report 요약
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_141.png" width="400"/>
+
+REF Power Report 상세
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_142.png" width="400"/>
+
+Proposed Power Report 요약
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_143.png" width="400"/>
+
+Proposed Power Report 상세
+
+<div align="left">
 
