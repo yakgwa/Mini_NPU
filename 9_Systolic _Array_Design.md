@@ -743,12 +743,12 @@ Controller까지 검증을 완료했으니, 이제 마지막으로 Activation Fu
 
     이 경우 전체 연산은 6 × 20 = 120번의 tile 연산 단계로 줄어들게 됩니다. 즉, 동일한 연산을 수행하더라도 array 크기가 커질수록 tile 분할 효율이 개선되고, idle PE가 감소하여 전체 실행 cycle 관점에서 더 높은 효율을 기대할 수 있습니다. 다만 이러한 효율 향상은 performance 관점에서의 비교이며, 실제 설계 시, data supply rate, interface bandwidth, PPA constraints 등을 함께 고려하여 최종 array size를 결정해야 합니다.
 
-            - 4×4 Array 사용 시 (Layer 1 기준):
+        - 4×4 Array 사용 시 (Layer 1 기준):
             - Weight: 30 ÷ 4 = 7 full tile + 2 잔여 → 마지막 tile에서 일부 PE가 idle
             - Activation: 100 sample ÷ 4 = 25 tile
             - 전체: 약 8 × 25 = 200번의 tile 연산
 
-            - 5×5 Array 사용 시 (Layer 1 기준):
+        - 5×5 Array 사용 시 (Layer 1 기준):
             - Weight: 30 ÷ 5 = 6 tile (정확히 분할, idle PE 없음)
             - Activation: 100 sample ÷ 5 = 20 tile
             - 전체: 6 × 20 = 120번의 tile 연산
