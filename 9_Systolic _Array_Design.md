@@ -308,11 +308,13 @@
 
 - FSM : typedef enum을 사용하여 컨트롤러의 상태(state)를 정의하고, 현재 상태(state)와 다음 상태(next_state)를 선언합니다. 본 FSM은 IDLE, RUN, DONE_STATE의 세 가지 상태로 구성됩니다. 이후 case 문을 통해 각 상태에서의 전이 조건을 정의합니다.
 
-    - IDLE : 연산 대기 상태로, i_start 신호가 asserted되면 RUN 상태로 전이합니다.
+    - IDLE : 연산 대기 상태로, i_start 신호가 asserted되면 RUN 상태로 전이합니다. 이 시점에 accumulator를 초기화(clr)됩니다.
     
     - RUN : systolic array에 대한 데이터 주입 및 연산이 진행되며, 내부 counter가 설정된 연산 사이클 수(CALC_CYCLES)에 도달하면 DONE_STATE로 전이합니다.(CALC_CYCLES = ROWS + COLS + K_DIM + 2는 정확한 최소 cycle 수를 수학적으로 계산한 값이라기보다는,데이터 주입 구간(K_DIM), row/column 방향 데이터 propagataion delay(ROWS, COLS), 그리고 PE 내부 pipeline 및 flush 구간을 고려한 보수적인 완료 기준)
     
     - DONE_STATE : 연산이 완료된 상태를 유지하며, i_start가 deasserted되면 다음 연산을 위해 다시 IDLE 상태로 복귀합니다.
+
+    - ※ CALC_CYCLES = ROWS + COLS + K_DIM + 2는 수학적 최소 cycle이 아니라, 데이터 주입 구간(K_DIM), propagation delay(ROWS, COLS), pipeline flush 구간을 고려한 보수적인 완료 기준입니다.
 
 - Input buffer Latching:
 
