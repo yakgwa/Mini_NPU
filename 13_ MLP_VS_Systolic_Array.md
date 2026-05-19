@@ -117,28 +117,26 @@ fileName mapping은 다음과 같이 5-digit zero-padding을 적용합니다.
         f0 = $sformatf("test_data_%05d.txt", base_idx + 0);
 
 - Inference 수행 결과:
-    - Accuracy: 94.99%
-    - PASS: 9,499
-    - FAIL: 501
+    - Accuracy: 96.32%
+    - PASS: 9,632
+    - FAIL: 368
 
-<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_118.png" width="400"/>
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_123.png" width="400"/>
+
+Proposed Model 10,000-sample inference 결과
 
 <div align="left">
 
 ### Reference vs Proposed 비교 분석
 
 - Accuracy
-    - Reference Model: 96.32%
-    - Proposed Model: 94.99%
-    - Accuracy Degradation: −1.33%p (Ref 대비)
-
-    - Proposed Model에서 추가적인 분류 오차가 발생하였습니다.
+    - Reference Model & Proposed Model : 96.32%
 
 ​- Inference Time (Simulation-based)
     - Reference: 87,300,235 ns (≈ 87.30 ms)
-    - Proposed: 173,350,145 ns (≈ 173.35 ms)
+    - Proposed: 174,150,145 ns (≈ 174.15 ms)
 
-- 1회 inference(done 1회) 기준으로 Proposed Model의 시간이 더 길었습니다.
+- Proposed Model은 4-lane 병렬 구조로, 1회 inference(done 1회)에 4개 sample을 동시에 처리합니다. 따라서 단순 실행 시간만으로는 두 구조를 직접 비교하기 어려우며, sample당 평균 latency 기준으로 비교하는 것이 적절합니다.
 
 - Throughput (samples/s)
     - Systolic Array는 1회 inference에서 4 samples를 동시에 처리합니다. 따라서 throughput은 inferences/s가 아닌 samples/s 기준으로 환산해야 합니다.
