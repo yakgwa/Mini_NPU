@@ -362,3 +362,132 @@ NPU_Wrapper.sv를 Block Design에 Add Module로 추가하려 했으나, Vivado 2
     [Vivado 12-4739] set_false_path: No valid object(s) found for '-from [get_ports rst_n]'
 
 Block Design 구조에서 rst_n은 외부 포트로 노출되지 않고 proc_sys_reset_0을 통해 동기화된 reset(peripheral_aresetn)이 NPU_Wrapper에 공급되는 구조였습니다. 이미 동기화된 신호이므로 false path 설정이 불필요하며 해당 라인을 주석 처리하여 해결하였습니다.
+
+### Synth 8-6895 Incremental Checkpoint 경고
+
+    ※ 경고 메시지
+    [Synth 8-6895] The reference checkpoint ... is not suitable for use with incremental synthesis for this design.
+
+이전에 NPU_Top을 Top으로 synthesis했던 checkpoint가 남아있는 상태에서 Top이 design_1_wrapper로 변경되어 incremental synthesis에 재사용할 수 없다는 경고입니다. Vivado가 자동으로 full synthesis로 전환하여 진행하므로 결과에 영향을 주지 않습니다.
+
+### Setup Timing Violation — Proposed (WNS: -0.335ns)
+
+Implementation 결과 다음과 같은 Setup Violation이 발생하였습니다.
+
+|항목|값|
+|------|---|
+|WNS (Worst Negative Slack)|-0.335ns|
+|TNS (Total Negative Slack)|-9.151ns|
+|Failing Endpoints|83 / 5,298|
+|Critical Path Source|ROWS[2].COLS[1].pe_inst / b_reg_reg[2]/C|
+|Critical Path Dest|ROWS[2].COLS[1].pe_inst / sum_reg[10]/D|
+|Data Path Delay|10.191ns (Logic 4.965ns + Route 5.226ns)|
+|Logic Levels|12 (CARRY4×7, LUT6×1, LUT4×1, LUT3×2, LUT2×1)|
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_146.png" width="400"/>
+
+Proposed wrapper Setup Violation
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_147.png" width="400"/>
+
+Failing Path 목록
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_148.png" width="400"/>
+
+Critical Path 상세
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_149.png" width="400"/>
+
+Critical Path Schematic
+
+<div align="center"><img src="https://github.com/yakgwa/Mini_NPU/blob/main/Picture_Data/image_150.png" width="400"/>
+
+Critical Path Routing
+
+<div align="left">
+
+원인은 sat_add_16 함수 내부의 16-bit 부호 확장 덧셈 + saturation 처리 연산이 CARRY4 체인 7개를 통과하는 긴 combinational path를 형성하여 10ns 요구사항을 초과하기 때문입니다. 여기에 물리적으로 분산 배치된 셀 간의 routing delay(5.226ns)까지 더해져 Violation이 발생하였습니다. 
+
+※ 향후 개선 방향
+
+- Pblock 제약으로 PE 관련 셀을 특정 영역에 집중 배치 → net delay 감소
+- sat_add 경로 파이프라인화 → logic delay 감소 (단, PE 구조 전체 재설계 필요)
+
+해당 violation이 실제 동작에 영향을 주는지 확인하기 위해 Post-Implementation Functional Simulation 및 Timing Simulation을 수행하였습니다.
+
+
+※ Post-Implementation Functional Simulation: 기능적 정확도 동일 확인
+※ Post-Implementation Timing Simulation: 오동작 없음 확인
+※ WNS -0.335ns는 Vivado의 worst-case 분석 기준이며, 실제 동작 조건에서는 타이밍 마진이 충분하여 오동작이 발생하지 않는 수준입니다.
+
+### Setup Timing Violation — REF (WNS: -1.068ns)
+
+REF Implementation에서도 Setup Violation이 발생하였으나, Proposed와 원인이 다릅니다.
+
+|항목|값|
+|------|---|
+|WNS (Worst Negative Slack)|-1.068ns|
+|Source|-mFind/o_data_valid_reg (maxFinder 내부 FF)|
+|Destination|intr_0 (외부 출력 핀 M14 — LED0)|
+|Data Path Delay|5.563ns (Logic 4.037ns + Route 1.526ns)|
+|Output Delay|2.000ns (XDC 설정값)|
+
+내부 combinational path 문제가 아니라 XDC에서 설정한 set_output_delay -max 2.0이 출력 핀 타이밍 마진을 제한하여 발생한 것입니다.
+
+    Required time 
+    = 10ns - clock uncertainty(0.154ns) - output_delay(2.0ns) 
+    = 7.846ns Arrival time 
+    = 8.914ns (OBUF 전파 포함) 
+    
+    Slack = -1.068ns
+
+intr_0은 LED0에 연결된 상태 표시용 핀으로 실제 타이밍 제약이 없으며, Post-Implementation Functional/Timing Simulation에서 기능적 정확도에 영향이 없음을 확인하였습니다.
+
+
+※ REF Post-Implementation Functional Simulation: 기능적 정확도 동일 확인
+※ REF Post-Implementation Timing Simulation: 오동작 없음 확인
+
+## Post-Implementation Simulation
+
+### 검증 방법
+
+기존 Behavioral Simulation용 TB를 그대로 활용하여 Post-Implementation Functional Simulation과 Timing Simulation을 각각 수행하였습니다.
+
+​- Functional Simulation : Gate-level netlist 기반, timing 무시, 로직 동작 검증
+- Timing Simulation : 실제 Place & Route 완료 후 SDF(Standard Delay Format) delay값 반영, clock edge 기준 setup/hold violation 영향 확인
+
+### 결과
+
+※ REF — Functional Simulation: Behavioral Simulation과 동일한 정확도 확인
+※ REF — Timing Simulation: Setup Violation(WNS -1.068ns)에도 불구하고 오동작 없음 확인
+
+※ Proposed — Functional Simulation: Behavioral Simulation과 동일한 정확도 확인
+※ Proposed — Timing Simulation: Setup Violation(WNS -0.335ns)에도 불구하고 오동작 없음 확인
+
+※ REF / Proposed 두 구조 모두 Post-Implementation Simulation에서 100MHz 동작 조건 하에 기능적으로 정상 동작함을 검증하였습니다.
+
+## 결과 의의
+본 분석에서는 Reference MLP 구조와 Proposed Systolic Array 구조를 PPA 관점에서 비교하였습니다.
+
+Area 측면에서는 LUT -53.2%, FF -34.1%, BRAM -47.2%의 절감이 확인되었습니다. 
+
+REF는 뉴런별 독립 MAC unit과 Sig_ROM 인스턴스(총 53개)를 사용하는 반면, 
+
+Proposed는 4×4 Systolic Array 1개를 group iteration으로 재사용하여 동일 기능을 더 적은 자원으로 구현하였습니다.
+
+Timing 측면에서는 REF와 Proposed 모두 Setup Violation이 발생하였습니다. 
+
+REF는 LED 표시용 출력 핀(intr_0)의 XDC output_delay 설정이 원인(WNS -1.068ns)으로, 실제 동작에는 영향이 없습니다. Proposed는 PE 내부 sat_add_16의 CARRY4 체인 7개로 구성된 combinational path가 원인(WNS -0.335ns)입니다. 
+
+두 경우 모두 Post-Implementation Functional/Timing Simulation에서 정상 동작을 확인하였습니다.
+
+Power 측면에서는 PS7이 전체 소비 전력의 대부분을 차지하며, PL 로직 소비 전력은 Proposed가 REF 대비 낮게 측정되었습니다.
+
+Logic, BRAM, Signals 항목 모두 Proposed가 낮았으며, 활성화되는 하드웨어 인스턴스 수 감소에 따른 결과로 분석됩니다.
+
+## What's next
+Systolic Array 기반 구조를 직접 설계하고, RTL 시뮬레이션으로 기능 검증을 완료하였으며, Synthesis 결과에서도 Reference 대비 유의미한 Resource 절감을 확인하였습니다. 
+
+다만 Timing Violation, 연속 Sample Inference 지원 등 남은 과제가 있으며, 추후 기회가 되면 수정할 예정입니다.
+
+​AXI4-Lite Interface를 적용하여 PS–PL 간 register-mapped control path를 구성하고,Zynq FPGA 보드 상에서 PS를 통한 inference execution을 검증하는 것을 목표로 합니다.
