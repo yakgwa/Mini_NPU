@@ -202,12 +202,12 @@ Proposed Implementation Device View
 
 ※ 비교 기준
 
-· REF: zyNet core (AXI 관련 로직 inst top + alw 제외) — Post-Synthesis 기준
-· Proposed: NPU_Top core — Post-Synthesis 기준
-· 동일 조건 비교를 위해 AXI를 제외한 순수 추론 로직만을 대상으로 하였습니다.
-· 수치는 report_utilization -hierarchical 결과 기반입니다.
+- REF: zyNet core (AXI 관련 로직 inst top + alw 제외) — Post-Synthesis 기준
+- Proposed: NPU_Top core — Post-Synthesis 기준
+- 동일 조건 비교를 위해 AXI를 제외한 순수 추론 로직만을 대상으로 하였습니다.
+- 수치는 report_utilization -hierarchical 결과 기반입니다.
 
-
+### Area
 
 
 
