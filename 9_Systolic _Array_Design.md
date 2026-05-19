@@ -727,7 +727,7 @@ Controller까지 검증을 완료했으니, 이제 마지막으로 Activation Fu
 
 - BIAS는 activation 이전에 적용되는 threshold(문턱값) 역할을 하며, MAC 결과에서 해당 값(BIAS)을 subtract한 뒤, 음수이면 0으로 제거하고 양수이면 그대로 통과시킵니다. 이때 subtraction 결과는 음수가 될 수 있고 bit growth가 발생할 수 있으므로, 중간 연산은 int로 확장하여 signed 산술을 안정적으로 처리합니다.
 
-​    즉, 최종 출력은 다음과 같은 형태로 계산됩니다. y=max(0, raw_acc_sum−BIAS) 이를 통해 연산 결과가 BIAS보다 작은 경우에는 noise로 간주하여 0으로 제거하고, 충분히 큰 값만 활성화되도록 합니다. 또한 ReLU 이후 양수 값은 ACC_W 비트 폭으로 출력되며(temp_val[ACC_W-1:0]), ACC_W를 초과하는 상위 비트는 절단됩니다. 
+        즉, 최종 출력은 다음과 같은 형태로 계산됩니다. y=max(0, raw_acc_sum−BIAS) 이를 통해 연산 결과가 BIAS보다 작은 경우에는 noise로 간주하여 0으로 제거하고, 충분히 큰 값만 활성화되도록 합니다. 또한 ReLU 이후 양수 값은 ACC_W 비트 폭으로 출력되며(temp_val[ACC_W-1:0]), ACC_W를 초과하는 상위 비트는 절단됩니다. 
 
 ​    본 방식은 학습된 bias를 더하는 전통적인 형태와는 달리, 출력 분포의 하한을 제어하는 threshold-based ReLU로 동작합니다. 이와 같이 OS(Output-Stationary) 기반 Systolic Array를 구현해 보았습니다. 본 테스트에서는 2×2 구조를 기준으로 검증을 수행하였으나, 설계는 parameterized 되어 있으므로 4×4, 5×5, 10×10 등 다양한 크기로 확장이 가능합니다.
 
